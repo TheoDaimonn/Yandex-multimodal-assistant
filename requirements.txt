@@ -5,3 +5,5 @@ aiofiles==24.1.0
 pymupdf==1.25.5
 pillow==11.2.1
 bs4==0.0.2
+pandas==2.2.3
+glob2==0.7
