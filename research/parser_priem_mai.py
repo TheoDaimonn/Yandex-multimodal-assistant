@@ -1,3 +1,4 @@
+import os
 import random
 
 import requests
@@ -36,20 +37,43 @@ def accept_cookies(session, url):
     except Exception as e:
         print(f"Error accepting cookies: {e}")
 
-
 def extract_text_from_page(html):
-    """Извлекает текстовый контент со страницы."""
+    """Извлекает текстовый контент со страницы, сохраняя структуру заголовков и абзацев."""
     soup = BeautifulSoup(html, 'html.parser')
-    paragraphs = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-    # Извлекаем текст из параграфов
-    text = "\n".join([p.get_text(strip=True) for p in paragraphs])
 
-    # Заменяем &NBSP; на обычные пробелы
-    text = text.replace('&NBSP;', ' ')
+    # Удаляем ненужные теги
+    for tag in soup(['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header']):
+        tag.decompose()
 
-    # Удаляем лишние пробелы и переносы строк
-    text = ' '.join(text.split())
-    return text
+    # Список для хранения результата
+    text_lines = []
+
+    # Проходим по всем элементам на странице
+    for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']):
+        if element.name and str(element.name).startswith('h'):
+            level = int(str(element.name)[1])  # h1 -> 1, h2 -> 2 и т.д.
+            text = element.get_text(strip=True)
+            if text:
+                text_lines.append(f"[H{level}] {text}")
+        elif element.name == 'p':
+            text = element.get_text(strip=True)
+            if text:
+                text_lines.append(f"P: {text}")
+
+    # Объединяем всё в одну строку с переносами
+    raw_text = '\n'.join(text_lines)
+
+    # Заменяем HTML-сущности
+    raw_text = raw_text.replace('\xa0', ' ') \
+                       .replace('&nbsp;', ' ') \
+                       .replace('&amp;', '&') \
+                       .replace('&quot;', '"') \
+                       .replace('&#39;', "'")
+
+    # Удаляем лишние пробелы и пустые строки
+    raw_text = '\n'.join(line.strip() for line in raw_text.splitlines() if line.strip())
+
+    return raw_text
 
 
 def is_pdf_link(href):
@@ -93,7 +117,14 @@ def crawl_site():
 
             # Извлекаем текст
             text = extract_text_from_page(response.text)
-            with open(output_filename, "a", encoding="utf-8") as f:
+
+            # Путь к папке data выше текущей директории
+            output_dir = "../data"
+            os.makedirs(output_dir, exist_ok=True)
+
+            file_path = os.path.join(output_dir, output_filename)
+
+            with open(file_path, "a", encoding="utf-8") as f:
                 f.write(f"\n--- Page: {current_url} ---\n{text}\n")
 
             # Извлекаем ссылки
