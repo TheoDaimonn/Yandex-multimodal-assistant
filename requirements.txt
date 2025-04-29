@@ -7,3 +7,9 @@ pillow==11.2.1
 bs4==0.0.2
 pandas==2.2.3
 glob2==0.7
+langgraph
+langchain
+langchain_community
+langchain-qdrant
+langchain-gigachat
+langgraph-cli[inmem]
