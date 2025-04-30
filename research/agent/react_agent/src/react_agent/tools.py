@@ -37,7 +37,7 @@ def get_individual_achivements() -> str:
     """
     Загружает и возвращает данные об индивидуальных достижениях для поступления в МАИ.
 
-    Читает файл 'achievements.json' и возвращает его содержимое.
+    Читает файл 'individual_achivements_mapping.json' и возвращает его содержимое.
     
     Возвращает:
         str: JSON-строка с информацией о баллах за индивидуальные достижения.
@@ -70,14 +70,56 @@ def get_branch_addresses() -> str:
     """
     Загружает и возвращает данные об адресах филлиалов МАИ.
 
-    Читает файл 'fillials.json' и возвращает его содержимое.
+    Читает файл 'fillials_info.json' и возвращает его содержимое.
     
     Возвращает:
         str: JSON-строка с информацией о баллах за индивидуальные достижения.
     """
-    with open('../data/fillials_info.json', 'r') as file:
+    with open('../data/filials_info.json', 'r') as file:
         data = json.load(file)
     return f"JSON с информацией об адресах филлиалов \n {data}"
 
 
-TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, get_branch_addresses]
+@tool
+def calculate_total_scholarship(scholarship_names: list[str]) -> str:
+    """
+    Рассчитывает общую сумму стипендий на основе списка их названий.
+
+    Принимает:
+        scholarship_names (list[str]): Список названий стипендий из JSON-файла
+
+    Возвращает:
+        str: Сообщение с общей суммой стипендий или ошибкой, если названия не найдены
+    """
+    with open('../data/scholarship_info.json', 'r') as file:
+        scholarships = json.load(file)
+    
+    total = 0
+    missing = []
+    
+    for name in scholarship_names:
+        if name in scholarships:
+            total += scholarships[name]
+        else:
+            missing.append(name)
+    
+    if missing:
+        return f"Ошибка: следующие стипендии не найдены - {', '.join(missing)}"
+    else:
+        return f"Общая сумма стипендий: {total} руб."
+
+
+def get_scholarship_amounts() -> str:
+    """
+    Загружает и возвращает данные о размерах стипендий в МАИ.
+
+    Читает файл 'scholarships_info.json' и возвращает его содержимое.
+    
+    Возвращает:
+        str: JSON-строка с информацией о размерах стипендий.
+    """
+    with open('../data/scholarships_info.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с размерами стипендий: \n {data}"
+
+TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, get_branch_addresses, get_scholarship_amounts, calculate_total_scholarship]
