@@ -1,9 +1,8 @@
 import datetime
-from aiogram import types
 import logging
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import os
+
+from aiogram import types
+
 
 def log_request(query: str, model_response, user: types.User):
     '''все логаем'''

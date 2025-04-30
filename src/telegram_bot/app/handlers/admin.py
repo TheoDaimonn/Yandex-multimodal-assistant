@@ -1,10 +1,10 @@
 from aiogram import types
-from app.config import config
-from app.loader import dp, bot, UserStates
+from src.telegram_bot.app.config import config
+from src.telegram_bot.app.loader import dp, bot, UserStates
 import logging
 from aiogram import Router
-from app.loader import dp, bot, UserStates, authorized_users, ADMIN_ID 
-from app.utils.auth import save_authorized_users
+from src.telegram_bot.app.loader import dp, bot, UserStates, authorized_users, ADMIN_ID
+from src.telegram_bot.app.utils.auth import save_authorized_users
 
 
 router = Router()

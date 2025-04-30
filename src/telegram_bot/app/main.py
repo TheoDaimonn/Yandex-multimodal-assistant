@@ -3,11 +3,11 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from app.config import config
-from app.utils.auth import load_authorized_users
-from app.handlers import routers  
+from src.telegram_bot.app.config import config
+from src.telegram_bot.app.utils.auth import load_authorized_users
+from src.telegram_bot.app.handlers import routers
 # from app.handlers.search import agent
-from app.loader import dp, bot, ADMIN_ID
+from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
 
 
 logging.basicConfig(level=logging.INFO)

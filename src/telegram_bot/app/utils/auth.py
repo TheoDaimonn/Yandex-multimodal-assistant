@@ -1,8 +1,8 @@
 import os
 import logging
 import json
-from app.config import AUTH_USERS_FILE
-from app.loader import authorized_users, ADMIN_ID  
+from src.telegram_bot.app.config import AUTH_USERS_FILE
+from src.telegram_bot.app.loader import authorized_users, ADMIN_ID
 
 def save_authorized_users():
     os.makedirs(os.path.dirname(AUTH_USERS_FILE), exist_ok=True)

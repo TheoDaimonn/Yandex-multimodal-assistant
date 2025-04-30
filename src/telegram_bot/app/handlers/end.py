@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import CommandStart, Command
 from aiogram import Router
 
-from app.loader import UserStates
+from src.telegram_bot.app.loader import UserStates
 
 router = Router()
 router.name = 'end'
