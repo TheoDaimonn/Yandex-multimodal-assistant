@@ -299,7 +299,7 @@ def yandex_generative_search(question: str) -> str:
     payload = {
         "modelUri": f"gpt://{folder_id}/yandexgptpro",
         "completionOptions": {"stream": False, "temperature": 0.3, "maxTokens": "2000"},
-        "site": {"site": ["https://mai.ru", "https://priem.mai.ru"]},
+        "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
         "messages": [{"role": "ROLE_USER", "text": question}]
     }
 
