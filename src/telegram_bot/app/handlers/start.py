@@ -39,9 +39,11 @@ async def handle_text(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
 
     # Обновляем сессию пользователя
+    print(message.from_user.is_bot)
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
-        new_message=message.text
+        new_message=message.text,
+        is_bot=False
     )
 
     # Если нужно - запускаем генерацию саммари в фоне
@@ -50,14 +52,21 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func()  # Ваша функция генерации ответа
+    response = await answer_to_user_func({'asas':1})
+
+    await dao.update_user_session(
+        tg_id=tg_id,
+        new_message=response,
+        is_bot=True  # Это сообщение от бота
+    )
+    # Ваша функция генерации ответа
     await message.answer(response)
 
 
 async def generate_summary_background(dao: UserDAO, user: User):
     """Фоновая задача для генерации саммари"""
     try:
-        summary = await summarise(user.current_messages)  # Ваш агент
+        summary = await summarise("aaaaa")  # Ваш агент
         await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary))
         await dao.session.commit()
     except Exception as e:

@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 
-from sqlalchemy import Column, Integer, Boolean, String, JSON, ForeignKey, BigInteger, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy import Integer, String, JSON, BigInteger, DateTime, func
+from sqlalchemy.ext.mutable import MutableList
+
 from src.telegram_bot.app.database import Base
 
 from sqlalchemy.orm import Mapped, mapped_column
@@ -19,6 +19,7 @@ class User(Base):
     message_count: Mapped[int] = mapped_column(Integer, default=0)
     last_summary: Mapped[Optional[str]] = mapped_column(String)
     last_activity: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
+    current_messages:  Mapped[List[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
 
     # Дополнительные поля
     psychological_profile: Mapped[Optional[str]] = mapped_column(String)
