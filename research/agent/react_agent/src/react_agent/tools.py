@@ -130,25 +130,6 @@ def search(query:str) -> str:
         treshold =  sum([p.score for p in resp.points]) / len(resp.points)
                 
         for point in resp.points:
-<<<<<<< HEAD
-            if set(point.payload['topics']) >= query_topics or point.score > 0.87:
-                results.append(point.payload["chunk_text"])
-    results = results[:20]
-    if 'chat' in point.payload['source']:
-        date = point.payload['source'].split('_')[0].replace('chat', '')
-    else:
-        mapping_dict = {
-            'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»' : 2024,
-            'Особые_условия_для_поступления_в_Институт_№8_МАИ' : '2024-2026',
-            'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив ' : '2025-2026',
-            'Правила приема МАИ' : '2025-2026',
-            'Правила Приема(Министерские) ' : '2024 - 2026',
-            'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ' :' 2012 - 2025'
-            }
-        date = mapping_dict.get(point.payload['source'], '2025-2026')
-
-    return "\n".join([20*"=" + "Актуально в период:" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
-=======
             if 'chat' in point.payload['source']:
                 date = point.payload['source'].split('_')[0].replace('chat', '')
             else:
@@ -166,7 +147,6 @@ def search(query:str) -> str:
             
     results = results[:10]
     return "\n".join([20*"="+ f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
->>>>>>> 6ff178842eed79db311fcb22bdd1e9e79b6408c5
 
 @tool
 def get_individual_achivements() -> str:
