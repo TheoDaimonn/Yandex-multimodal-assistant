@@ -1,8 +1,7 @@
-from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
+from src.telegram_bot.app.loader import dp, bot
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
 from src.telegram_bot.app.config import config
 from src.telegram_bot.app.handlers import routers
 from src.telegram_bot.app.database import init_db
@@ -24,8 +23,6 @@ async def on_shutdown():
 
 
 async def main():
-    bot = Bot(token=config.TG_API_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
 
     await on_startup()
     try:
