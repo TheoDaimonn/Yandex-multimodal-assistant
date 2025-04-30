@@ -26,22 +26,38 @@ import json
 #     configuration = Configuration.from_context()
 #     wrapped = TavilySearch(max_results=configuration.max_search_results)
 #     return cast(dict[str, Any], await wrapped.ainvoke({"query": query}))
-@tool
-def search(query:str) -> str:
-    """Ищет информацию нужную пользователю"""
-    return f"Крутая  информация про {query}"
+
+# @tool
+# def search(query:str) -> str:
+#     """Ищет информацию нужную пользователю"""
+#     return f"Крутая  информация про {query}"
 
 @tool
 def get_individual_achivements() -> str:
-    """Получает JSON с информацией об индивидуальных достижениях"""
-    with open('research/agent/react_agent/src/achievements.json', 'r') as file:
+    """
+    Загружает и возвращает данные об индивидуальных достижениях для поступления в МАИ.
+
+    Читает файл 'achievements.json' и возвращает его содержимое.
+    
+    Возвращает:
+        str: JSON-строка с информацией о баллах за индивидуальные достижения.
+    """
+    with open('../data/individual_achivements_mapping.json', 'r') as file:
         data = json.load(file)
     return f"JSON с информацией об индивидуальных достижениях \n {data}"
 
 @tool
 def count_individual_achivements(achivements_list:list) -> str:
-    """Подсчитывает сумму баллов за индивидуальные достижения"""
-    with open('research/agent/react_agent/src/achievements.json', 'r') as file:
+    """
+    Подсчитывает суммарное количество баллов за указанные индивидуальные достижения.
+
+    Принимает:
+        achievements_list (list[str]): Список ключей достижений.
+
+    Возвращает:
+        str: Сообщение с общей суммой баллов.
+    """
+    with open('../data/individual_achivements_mapping.json', 'r') as file:
         data = json.load(file)
     total = 0
     for achievement in achivements_list:
@@ -49,8 +65,19 @@ def count_individual_achivements(achivements_list:list) -> str:
     return f"Сумма индивидуальных достижений пользователя: \n {total % 10}"
 
 
+@tool
+def get_branch_addresses() -> str:
+    """
+    Загружает и возвращает данные об адресах филлиалов МАИ.
+
+    Читает файл 'fillials.json' и возвращает его содержимое.
+    
+    Возвращает:
+        str: JSON-строка с информацией о баллах за индивидуальные достижения.
+    """
+    with open('../data/fillials_info.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с информацией об адресах филлиалов \n {data}"
 
 
-
-
-TOOLS: List[Callable[..., Any]] = [search]
+TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, get_branch_addresses]
