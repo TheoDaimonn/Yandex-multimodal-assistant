@@ -24,6 +24,11 @@ sdk = YCloudML(folder_id=os.environ["FOLDER_ID"], auth=os.environ["API_KEY"])
 dense_query_embedding_model = sdk.models.text_embeddings("query")
 dense_doc_embedding_model = sdk.models.text_embeddings("doc")
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
+folder_id = os.environ["FOLDER_ID"]
+api_key = os.environ["API_KEY"]
+
+sdk = YCloudML(folder_id=folder_id, auth=api_key)
+model = sdk.models.completions("yandexgpt", model_version="rc")
 
 from datasets import Dataset
 import tqdm
@@ -76,7 +81,10 @@ if not client.collection_exists("Collection_pdf"):
             batch_size=batch_size,  
         )
         
-
+def tag_query(query):
+    with open('../../data/tagging_prompt.md', 'r', encoding='utf-8') as f:
+        system_prompt = f.read()
+    return model.run(system_prompt + "\n\n Входной запрос:\n" + query).text
 
 @tool
 def search(query:str) -> str:
@@ -87,19 +95,25 @@ def search(query:str) -> str:
     """
     dense_query_vector = dense_query_embedding_model.run(query).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
+    query_topics = tag_query(query).split(', ')
+    if 'мусор' in query_topics:
+        query_topics.remove("мусор")
+    query_topics = set(query_topics)
+
     prefetch = [
         models.Prefetch(
             query=dense_query_vector,
             using="dense",
-            limit=20,
+            limit=30,
         ),
         models.Prefetch(
             query=models.SparseVector(**sparse_query_vector.as_object()),
             using="sparse",
-            limit=20,
+            limit=30,
         )
     ]
     results = []
+    print(query, ' - ', query_topics)
     for col in ["Collection_pdf"]:
         resp = client.query_points(
             col,
@@ -108,13 +122,25 @@ def search(query:str) -> str:
                 fusion=models.Fusion.RRF,
             ),
             with_payload=True,
-            limit=10,
+            limit=10
         )
                 
         for point in resp.points:
-            results.append(point.payload["chunk_text"])
-    
-    return "\n".join([20*"=" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
+            if set(point.payload['topics']) >= query_topics or point.score > 0.87:
+                results.append(point.payload["chunk_text"])
+    results = results[:20]
+    if 'chat' in point.payload['source']:
+        date = point.payload['source'].split('_')[0].replace('chat', '')
+    else:
+        mapping_dict = {'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»' : 2024,
+'Особые_условия_для_поступления_в_Институт_№8_МАИ' : '2024-2026',
+'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив ' : '2025-2026',
+'Правила приема МАИ' : '2025-2026',
+'Правила Приема(Министерские) ' : '2024 - 2026',
+'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ' :' 2012 - 2025'}
+        date = mapping_dict.get(point.payload['source'], '2025-2026')
+
+    return "\n".join([20*"=" + "Актуально в период:" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
 
 @tool
 def get_individual_achivements() -> str:
