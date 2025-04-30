@@ -40,15 +40,20 @@ class UserDAO:
 
         if not user:
             user = await self.create_user(tg_id=tg_id)
-            user.current_messages = [{"role": "user", "text": new_message}]
+            user.current_messages = [{"role": "assistant" if is_bot else "user", "text": new_message}]
             user.message_count = 1
 
         else:
-            messages = 'sfd sfs dfsfd  fsdf ssfd'
+
+            user.current_messages.append({
+                "role": "assistant" if is_bot else "user",
+                "text": new_message,
+            })
 
             if not is_bot:
                 user.message_count += 1
-                need_summary = (user.message_count % 5 == 0 and len(messages) >= 3)
+                need_summary = (user.message_count % 5 == 0 and user.message_count >= 3)
+
 
         user.last_activity = datetime.now()
         await self.session.commit()

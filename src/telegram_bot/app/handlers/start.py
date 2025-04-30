@@ -40,9 +40,11 @@ async def handle_text(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
 
     # Обновляем сессию пользователя
+    print(message.from_user.is_bot)
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
-        new_message=message.text
+        new_message=message.text,
+        is_bot=False
     )
 
     # Если нужно - запускаем генерацию саммари в фоне
@@ -51,7 +53,14 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func({'asas':1})  # Ваша функция генерации ответа
+    response = await answer_to_user_func({'asas':1})
+
+    await dao.update_user_session(
+        tg_id=tg_id,
+        new_message=response,
+        is_bot=True  # Это сообщение от бота
+    )
+    # Ваша функция генерации ответа
     await message.answer(response)
 
 
