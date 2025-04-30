@@ -42,7 +42,7 @@ model = sdk.models.completions("yandexgpt", model_version="rc")
 with open('data/tuition_fees.json', 'r') as file:
     TUITION = json.load(file)
 
-with open('data/scholarship_info.json', 'r') as file:
+with open('data/scholarships_info.json', 'r') as file:
     SCHOLARSHIP = json.load(file)
 
 with open('data/passing_scores.json', 'r') as file:
