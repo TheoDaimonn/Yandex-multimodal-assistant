@@ -15,7 +15,7 @@ router = Router()
 router.name = 'start'
 
 
-@router.message(F.text, F.text.startswith('/start'))
+@router.message(F.text.startswith('/start'))
 async def start_cmd(message: Message, dao: UserDAO):
     welcome_text = (
         "👋бла бла бла приемка бла бла бла \n\n"
@@ -34,7 +34,7 @@ async def start_cmd(message: Message, dao: UserDAO):
     await message.answer(welcome_text)
 
 
-@router.message(F.text, ~F.text.startswith('/'))
+@router.message(~F.text.startswith('/'))
 async def handle_text(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
 
@@ -50,7 +50,7 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func  # Ваша функция генерации ответа
+    response = await answer_to_user_func()  # Ваша функция генерации ответа
     await message.answer(response)
 
 
