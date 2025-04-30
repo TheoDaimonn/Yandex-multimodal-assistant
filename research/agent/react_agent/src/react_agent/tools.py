@@ -14,7 +14,7 @@ from langchain_core.tools import tool
 
 from qdrant_client import QdrantClient, models
 import pandas as pd
-client = QdrantClient("https://localhost:6333")
+client = QdrantClient("http://localhost:6333")
 
 import os
 from fastembed import SparseTextEmbedding
@@ -80,8 +80,11 @@ if not client.collection_exists("Collection_pdf"):
 
 @tool
 def search(query:str) -> str:
-    """Useful for when you need to answer questions about current events. You should \
-    ask targeted questions"""
+    """
+    Инструмент для поиска информации в базе знаний Московского авиационного института (МАИ).
+    Предназначен для помощи абитуриентам в получении актуальных данных о направлениях подготовки, правилах поступления, требованиях к документам, расписании экзаменов и других вопросах, связанных с обучением в МАИ.
+    Формулируйте запросы чётко и конкретно для получения релевантной информации
+    """
     dense_query_vector = dense_query_embedding_model.run(query).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
@@ -130,7 +133,7 @@ def get_individual_achivements() -> str:
 @tool
 def count_individual_achivements(achivements_list:list) -> str:
     """
-    Подсчитывает суммарное количество баллов за указанные индивидуальные достижения.
+    Подсчитывает суммарное количество баллов за указанные индивидуальные достижения. Сначало нужно вызвать инструмент "get_individual_achivements" и указать список достижений в виде ключей JSON в соответствие с полями.
 
     Принимает:
         achievements_list (list[str]): Список ключей достижений.
