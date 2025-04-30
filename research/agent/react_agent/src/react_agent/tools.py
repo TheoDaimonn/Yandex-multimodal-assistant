@@ -14,7 +14,7 @@ from langchain_core.tools import tool
 
 from qdrant_client import QdrantClient, models
 import pandas as pd
-client = QdrantClient(":memory:")
+client = QdrantClient("https://localhost:6333")
 
 import os
 from fastembed import SparseTextEmbedding
@@ -97,17 +97,21 @@ def search(query:str) -> str:
         )
     ]
     results = []
-    for i in ["Collection_pdf"]:
-        results.append(client.query_points(
-            i,
+    for col in ["Collection_pdf"]:
+        resp = client.query_points(
+            col,
             prefetch=prefetch,
             query=models.FusionQuery(
                 fusion=models.Fusion.RRF,
             ),
             with_payload=True,
             limit=10,
-        ))
-    return "\n".join([i. for i in results])
+        )
+                
+        for point in resp.points:
+            results.append(point.payload["chunk_text"])
+    
+    return "\n".join([20*"=" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
 
 @tool
 def get_individual_achivements() -> str:
