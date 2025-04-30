@@ -122,4 +122,66 @@ def get_scholarship_amounts() -> str:
         data = json.load(file)
     return f"JSON с размерами стипендий: \n {data}"
 
-TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, get_branch_addresses, get_scholarship_amounts, calculate_total_scholarship]
+@tool
+def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
+    """
+    Рассчитывает стоимость обучения по конкретному направлению за указанный период.
+
+    Принимает:
+        program_code (str): Код образовательной программы (например, "09.03.01")
+        duration (int): Период обучения в годах (1 - за 1 год, 4 - за 4 года)
+
+    Возвращает:
+        str: Сообщение со стоимостью обучения или ошибкой, если программа не найдена
+    """
+    with open('../data/tuition_fees.json', 'r') as file:
+        tuition_data = json.load(file)
+    
+    # Ищем программу во всех филиалах и уровнях образования
+    for campus_name, campus_data in tuition_data.items():
+        for level_name, level_data in campus_data.items():
+            if program_code in level_data:
+                program_info = level_data[program_code]
+                if isinstance(program_info["Очная"], int):
+                    if level_name == "Базовое высшее (4 года)" or level_name == "Бакалавриат":
+                        yearly_cost = program_info["Очная"] / 4
+                    else:
+                        yearly_cost = program_info["Очная"] / 5.5
+
+                    total_cost = yearly_cost * duration
+                    
+                    program_name = program_info["Наименование"]
+                    campus = campus_name.split('(')[0].strip()
+                    
+                    return (
+                        f"Стоимость обучения по программе '{program_name}' ({program_code}):\n"
+                        f"• За 1 год: {yearly_cost} руб.\n"
+                        f"• За {duration} года(лет): {total_cost} руб.\n"
+                        f"Филиал: {campus}\n"
+                        f"Уровень образования: {level_name}"
+                    )
+                else:
+                    return f"Ошибка: стоимость обучения для программы {program_code} не указана (уточняется)"
+    
+    return f"Ошибка: программа с кодом {program_code} не найдена"
+
+
+@tool
+def get_tuition_info() -> str:
+    """
+    Загружает и возвращает данные о стоимости обучения в МАИ и филиалах.
+
+    Читает файл 'tuition_fees.json' и возвращает его содержимое.
+    
+    Возвращает:
+        str: JSON-строка с информацией о стоимости обучения
+    """
+    with open('../data/tuition_fees.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с данными о стоимости обучения: \n {json.dumps(data, indent=2, ensure_ascii=False)}"
+
+
+TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, 
+                                    get_branch_addresses,
+                                    get_scholarship_amounts, calculate_total_scholarship,
+                                    get_tuition_info, calculate_tuition_by_program]
