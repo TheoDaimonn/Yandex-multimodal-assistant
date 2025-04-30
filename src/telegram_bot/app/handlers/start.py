@@ -50,7 +50,7 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func()  # Ваша функция генерации ответа
+    response = await answer_to_user_func({'asas':1})  # Ваша функция генерации ответа
     await message.answer(response)
 
 
