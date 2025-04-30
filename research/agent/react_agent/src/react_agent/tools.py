@@ -7,30 +7,81 @@ consider implementing more robust and specialized tools tailored to your needs.
 """
 
 from typing import Any, Callable, List, Optional, cast
-
-from langchain_tavily import TavilySearch  # type: ignore[import-not-found]
+import json
 
 from react_agent.configuration import Configuration
 from langchain_core.tools import tool
 
-import json
+from qdrant_client import QdrantClient, models
+from yandex_chain import YandexEmbeddings
+
+from langchain_openai import OpenAIEmbeddings
+import pandas as pd
+client = QdrantClient(url="http://localhost:6333")
+
+import os
+from fastembed import TextEmbedding, SparseTextEmbedding
+
+dense_embedding_model = YandexEmbeddings(folder_id=os.environ["folder_id"], api_key=os.environ["api_key"])
+bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
+
+if not client.collection_exists("Collection_pdf"):
+    client.create_collection(
+        "Collection_pdf",
+        vectors_config={
+            "dense": models.VectorParams(
+                size=len(dense_embedding_model.embed_document("0")),
+                distance=models.Distance.COSINE,
+            )
+        },
+        sparse_vectors_config={
+            "bm25": models.SparseVectorParams(
+                modifier=models.Modifier.IDF,
+            )
+        }
+    )
+    df = pd.DataFrame(pd.read_csv("react_agent/data/final_data_with_topics_nd_preprocess.csv"))
+    
+    client.upload_collection(
+        "Collection_pdf",
+        vectors = {
+            "dense": dense_embedding_model.embed_documents(df["chunk_text"].tolist()),
+            "bm25": bm25_embedding_model.embed(df["chunk_text"].tolist()),
+        },
+        payload=df.to_dict(),
+    )
 
 
-# async def search(query: str) -> Optional[dict[str, Any]]:
-#     """Search for general web results.
-
-#     This function performs a search using the Tavily search engine, which is designed
-#     to provide comprehensive, accurate, and trusted results. It's particularly useful
-#     for answering questions about current events.
-#     """
-#     configuration = Configuration.from_context()
-#     wrapped = TavilySearch(max_results=configuration.max_search_results)
-#     return cast(dict[str, Any], await wrapped.ainvoke({"query": query}))
-
-# @tool
-# def search(query:str) -> str:
-#     """Ищет информацию нужную пользователю"""
-#     return f"Крутая  информация про {query}"
+@tool
+def search(query:str) -> str:
+    """Useful for when you need to answer questions about current events. You should \
+    ask targeted questions"""
+    dense_query_vector = dense_embedding_model.embed_query(query)
+    sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
+    prefetch = [
+        models.Prefetch(
+            query=dense_query_vector,
+            using="dense",
+            limit=20,
+        ),
+        models.Prefetch(
+            query=models.SparseVector(**sparse_query_vector.as_object()),
+            using="bm25",
+            limit=20,
+        )
+    ]
+    results = []
+    for i in ["Collection_pdf"]: #, "Collection_threads", "Collection_ocr"]:
+        results.append(client.query_points(
+            i,
+            prefetch=prefetch,
+            query=models.FusionQuery(
+                fusion=models.Fusion.RRF,
+            ),
+            with_payload=True,
+            limit=10,
+        ))
+    return results
 
 @tool
 def get_individual_achivements() -> str:
@@ -181,7 +232,9 @@ def get_tuition_info() -> str:
     return f"JSON с данными о стоимости обучения: \n {json.dumps(data, indent=2, ensure_ascii=False)}"
 
 
+
+
 TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, 
                                     get_branch_addresses,
                                     get_scholarship_amounts, calculate_total_scholarship,
-                                    get_tuition_info, calculate_tuition_by_program]
+                                    get_tuition_info, calculate_tuition_by_program, search]
