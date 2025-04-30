@@ -8,9 +8,14 @@ from src.telegram_bot.app.utils.auth import load_authorized_users
 from src.telegram_bot.app.handlers import routers
 # from app.handlers.search import agent
 from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
+from src.telegram_bot.app.database import Base, engine
+from src.telegram_bot.app.models.models import User, Session
+async def init_models():
+    Base.metadata.create_all(bind=engine)
 
 
 logging.basicConfig(level=logging.INFO)
+
 
 async def on_startup():
     load_authorized_users()
@@ -35,6 +40,7 @@ async def on_shutdown():
 
 
 async def main():
+    await init_models()
     await on_startup()
     try:
         await dp.start_polling(bot)

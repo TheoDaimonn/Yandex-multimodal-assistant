@@ -1,15 +1,13 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase
 
 import os
 from sqlalchemy import create_engine
 
 # Путь к базе данных
-db_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".." "database")
+db_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "database")
 os.makedirs(db_dir, exist_ok=True)
 db_path = os.path.join(db_dir, "bot.db")
 
@@ -19,7 +17,5 @@ engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread"
 load_dotenv(override=True)
 
 
-class Base(AsyncAttrs, DeclarativeBase):
+class Base(DeclarativeBase):
     __abstract__ = True
-
-Base.metadata.create_all(bind=engine)
