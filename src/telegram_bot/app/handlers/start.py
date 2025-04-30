@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from aiogram import F
 from aiogram.types import Message
 from aiogram import Router
@@ -9,8 +10,7 @@ from src.telegram_bot.app.dao.user_dao import UserDAO
 
 
 from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
-from src.telegram_bot.app.handlers.summarise import summarise
-# from src.telegram_bot.app.utils.profile_query import profile_query
+from src.telegram_bot.app.utils.profile_query import profile_query
 
 router = Router()
 router.name = 'start'
@@ -67,7 +67,9 @@ async def handle_text(message: Message, dao: UserDAO):
 async def generate_summary_background(dao: UserDAO, user: User):
     """Фоновая задача для генерации саммари"""
     try:
-        summary = await summarise("aaaaa")  # Ваш агент
+        print('зашли в портрет')
+        summary = profile_query("я хочу поступить в 8 институт") 
+        print(summary)  
         await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary))
         await dao.session.commit()
     except Exception as e:
