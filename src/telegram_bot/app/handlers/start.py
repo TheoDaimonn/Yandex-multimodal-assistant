@@ -68,7 +68,10 @@ async def handle_text(message: Message, dao: UserDAO):
 async def generate_summary_background(dao: UserDAO, user: User):
     """Фоновая задача для генерации саммари"""
     try:
+        # tg_id = message.from_user.id
+        
         print('зашли в портрет')
+        res = await dao.return_chat_history(tg_id)
         summary = profile_query("я хочу поступить в 8 институт") 
         print(summary)  
         await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary))
