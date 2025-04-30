@@ -44,18 +44,16 @@ class UserDAO:
             user.message_count = 1
 
         else:
-            if user.current_messages is None:
-                user.current_messages = []
 
             user.current_messages.append({
                 "role": "assistant" if is_bot else "user",
                 "text": new_message,
-                "timestamp": datetime.now().isoformat()  # Добавляем временную метку
             })
 
             if not is_bot:
                 user.message_count += 1
                 need_summary = (user.message_count % 5 == 0 and user.message_count >= 3)
+
 
         user.last_activity = datetime.now()
         await self.session.commit()
