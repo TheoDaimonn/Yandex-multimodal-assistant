@@ -2,18 +2,26 @@ import asyncio
 import logging
 import json
 from aiogram import F
-from aiogram.types import Message
+from aiogram.types import Message, ContentType
 from aiogram import Router
 from sqlalchemy import update
 from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
 
-
 from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
 from src.telegram_bot.app.utils.profile_query import profile_query
+from src.telegram_bot.app.utils.speech import transcribe_ya_speechkit
+
+import asyncio
+import os
+import aiohttp
+
+from src.telegram_bot.app.loader import bot
 
 router = Router()
 router.name = 'start'
+
+DOWNLOAD_DIR = "downloads"
 
 WELCOME = (
     "👋 *Привет!* Я бот приёмной комиссии **МАИ**.\n\n"
@@ -28,7 +36,7 @@ WELCOME = (
 
 INSTRUCTION = (
     "📑 *Как пользоваться ботом*\n\n"
-    "1️⃣  Сформулируйте вопрос обычным текстом — я отвечу мгновенно.\n"
+    "1️⃣  Сформулируйте вопрос обычным текстом — я отвечу мгновенно (или можно записать голосовое 😎)\n"
     "2️⃣  Полезные команды:\n"
     "   • /start — перезапуск и главное меню\n"
     "   • /instruction — эта инструкция\n"
@@ -46,6 +54,23 @@ HELP = (
     "[Максим](https://t.me/hell_lumpen) обязательно поможет вам в любое время дня и ночи♥️"
 )
 
+
+
+SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
+SPEECH_API_KEY    = os.environ["API_KEY"]
+
+async def transcribe_ya_speechkit(audio_path: str) -> str:
+    url = "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize"
+    params = {"lang":"ru-RU","folderId":SPEECH_FOLDER_ID}
+    headers = {"Authorization":f"Api-Key {SPEECH_API_KEY}"}
+    async with aiohttp.ClientSession() as session:
+        with open(audio_path, "rb") as f:
+            data = f.read()
+        async with session.post(url, params=params, headers=headers, data=data) as resp:
+            result = await resp.json()
+            print("STT response:", result)
+            return result.get("result", "")
+        
 @router.message(F.text.startswith('/start'))
 async def start_cmd(message: Message, dao: UserDAO):
 
@@ -61,20 +86,15 @@ async def start_cmd(message: Message, dao: UserDAO):
 
     await message.answer(WELCOME)
 
-
-@router.message(~F.text.startswith('/'))
-async def handle_text(message: Message, dao: UserDAO):
+@router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
+async def text_handler(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
-
-    # Обновляем сессию пользователя
-
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
         new_message=message.text,
         is_bot=False
     )
 
-    # Если нужно - запускаем генерацию саммари в фоне
     if need_summary:
         await asyncio.create_task(
             generate_summary_background(dao, user, id=tg_id)
@@ -85,11 +105,43 @@ async def handle_text(message: Message, dao: UserDAO):
     await dao.update_user_session(
         tg_id=tg_id,
         new_message=response,
-        is_bot=True  # Это сообщение от бота
+        is_bot=True  
     )
-    # Ваша функция генерации ответа
+
     await message.answer(response)
 
+@router.message(F.content_type == ContentType.VOICE)
+async def voice_handler(message: Message, dao: UserDAO):
+    print('voice_handler')
+
+    file = await bot.get_file(message.voice.file_id)
+    file_path = file.file_path
+
+    raw_io = await bot.download_file(file_path)   
+    local_path = os.path.join(DOWNLOAD_DIR, f"{message.voice.file_id}.ogg")
+    with open(local_path, "wb") as f:
+        f.write(raw_io.read())     
+    
+    text = await transcribe_ya_speechkit(local_path)
+    print(text)
+
+    try: os.remove(local_path)
+    except: pass
+    
+    if not text:
+        return await message.reply("❌ не удалось распознать речь.")
+    
+    await message.answer(f"📝 вы сказали: «{text}»")
+    user, need = await dao.update_user_session(
+        tg_id=message.from_user.id, new_message=text, is_bot=False
+    )
+    if need:
+        asyncio.create_task(generate_summary_background(dao, user, tg_id=message.from_user.id))
+    resp = await answer_to_user_func({"text": text})
+    await dao.update_user_session(
+        tg_id=message.from_user.id, new_message=resp, is_bot=True
+    )
+    await message.answer(resp)
 
 async def generate_summary_background(dao: UserDAO, user: User, id):
     """Фоновая задача для генерации саммари"""
