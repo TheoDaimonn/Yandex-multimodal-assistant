@@ -113,6 +113,7 @@ def search(query:str) -> str:
         )
     ]
     results = []
+    print(query, ' - ', query_topics)
     for col in ["Collection_pdf"]:
         resp = client.query_points(
             col,
