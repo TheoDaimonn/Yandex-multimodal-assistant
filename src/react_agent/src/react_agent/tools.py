@@ -57,7 +57,7 @@ if not client.collection_exists("Collection_pdf"):
     batch_size = 4
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*3]).embedding for doc in batch["chunk_text"]]
+        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*2]).embedding for doc in batch["chunk_text"]]
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
         
         client.upload_points(
@@ -96,7 +96,7 @@ def search(query:str) -> str:
     Предназначен для помощи абитуриентам в получении актуальных данных о направлениях подготовки, правилах поступления, требованиях к документам, расписании экзаменов и других вопросах, связанных с обучением в МАИ.
     Формулируйте запросы чётко и конкретно для получения релевантной информации
     """
-    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*3]).embedding
+    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -158,7 +158,7 @@ def get_individual_achivements() -> str:
     Возвращает:
         str: JSON-строка с информацией о баллах за индивидуальные достижения.
     """
-    with open('../data/individual_achivements_mapping.json', 'r') as file:
+    with open('data/individual_achivements_mapping.json', 'r') as file:
         data = json.load(file)
     return f"JSON с информацией об индивидуальных достижениях \n {data}"
 
@@ -173,7 +173,7 @@ def count_individual_achivements(achivements_list:list) -> str:
     Возвращает:
         str: Сообщение с общей суммой баллов.
     """
-    with open('../data/individual_achivements_mapping.json', 'r') as file:
+    with open('data/individual_achivements_mapping.json', 'r') as file:
         data = json.load(file)
     total = 0
     for achievement in achivements_list:
@@ -191,7 +191,7 @@ def get_branch_addresses() -> str:
     Возвращает:
         str: JSON-строка с информацией о баллах за индивидуальные достижения.
     """
-    with open('../data/filials_info.json', 'r') as file:
+    with open('data/filials_info.json', 'r') as file:
         data = json.load(file)
     return f"JSON с информацией об адресах филлиалов \n {data}"
 
@@ -207,7 +207,7 @@ def calculate_total_scholarship(scholarship_names: list[str]) -> str:
     Возвращает:
         str: Сообщение с общей суммой стипендий или ошибкой, если названия не найдены
     """
-    with open('../data/scholarship_info.json', 'r') as file:
+    with open('data/scholarship_info.json', 'r') as file:
         scholarships = json.load(file)
     
     total = 0
@@ -234,7 +234,7 @@ def get_scholarship_amounts() -> str:
     Возвращает:
         str: JSON-строка с информацией о размерах стипендий.
     """
-    with open('../data/scholarships_info.json', 'r') as file:
+    with open('data/scholarships_info.json', 'r') as file:
         data = json.load(file)
     return f"JSON с размерами стипендий: \n {data}"
 
@@ -250,7 +250,7 @@ def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
     Возвращает:
         str: Сообщение со стоимостью обучения или ошибкой, если программа не найдена
     """
-    with open('../data/tuition_fees.json', 'r') as file:
+    with open('data/tuition_fees.json', 'r') as file:
         tuition_data = json.load(file)
     
     # Ищем программу во всех филиалах и уровнях образования
@@ -292,7 +292,7 @@ def get_tuition_info() -> str:
     Возвращает:
         str: JSON-строка с информацией о стоимости обучения
     """
-    with open('../data/tuition_fees.json', 'r') as file:
+    with open('data/tuition_fees.json', 'r') as file:
         data = json.load(file)
     return f"JSON с данными о стоимости обучения: \n {json.dumps(data, indent=2, ensure_ascii=False)}"
 

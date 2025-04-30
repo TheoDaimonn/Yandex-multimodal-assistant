@@ -50,11 +50,10 @@ async def handle_text(message: Message, dao: UserDAO):
     # Если нужно - запускаем генерацию саммари в фоне
     if need_summary:
         await asyncio.create_task(
-            generate_summary_background(dao, user)
+            generate_summary_background(dao, user, id=tg_id)
         )
 
-    res = await dao.return_chat_history(tg_id)
-    response = await answer_to_user_func(res)
+    response = await answer_to_user_func('ass')
 
     await dao.update_user_session(
         tg_id=tg_id,
@@ -65,7 +64,7 @@ async def handle_text(message: Message, dao: UserDAO):
     await message.answer(response)
 
 
-async def generate_summary_background(dao: UserDAO, user: User):
+async def generate_summary_background(dao: UserDAO, user: User, id):
     """Фоновая задача для генерации саммари"""
     try:
         # tg_id = message.from_user.id
