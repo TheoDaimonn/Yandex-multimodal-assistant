@@ -19,7 +19,7 @@ client = QdrantClient("https://localhost:6333")
 import os
 from fastembed import SparseTextEmbedding
 from yandex_cloud_ml_sdk import YCloudML
-sdk = YCloudML(folder_id=os.environ["folder_id"], auth=os.environ["api_key"])
+sdk = YCloudML(folder_id=os.environ["FOLDER_ID"], auth=os.environ["API_KEY"])
 
 dense_query_embedding_model = sdk.models.text_embeddings("query")
 dense_doc_embedding_model = sdk.models.text_embeddings("doc")
