@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
-from app.config import config
+from src.telegram_bot.app.config import config
 
 bot = Bot(token=config.TG_API_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())

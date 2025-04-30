@@ -7,9 +7,15 @@ pillow==11.2.1
 bs4==0.0.2
 pandas==2.2.3
 glob2==0.7
-langgraph
-langchain
+langgraph~=0.4.0
+langchain~=0.3.24
 langchain_community
 langchain-qdrant
 langchain-gigachat
 langgraph-cli[inmem]
+
+aiogram~=3.20.0.post0
+typing_extensions~=4.13.2
+langsmith~=0.3.38
+beautifulsoup4~=4.13.4
+SQLAlchemy~=2.0.40

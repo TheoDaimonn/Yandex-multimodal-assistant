@@ -4,11 +4,11 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram import Router
 
-from app.loader import dp, bot, UserStates, authorized_users, pending_users, ADMIN_ID
-from app.utils.auth import save_authorized_users
-from app.handlers.admin import is_admin
-from app.config import config
-from app.utils.keyboards import create_inline_keyboard
+from src.telegram_bot.app.loader import dp, bot, UserStates, authorized_users, pending_users, ADMIN_ID
+from src.telegram_bot.app.utils.auth import save_authorized_users
+from src.telegram_bot.app.handlers.admin import is_admin
+from src.telegram_bot.app.config import config
+from src.telegram_bot.app.utils.keyboards import create_inline_keyboard
 # from app.handlers.search import handle_search
 
 router = Router()
