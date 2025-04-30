@@ -1,6 +1,5 @@
 """Utility & helper functions."""
 
-from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_openai.chat_models import ChatOpenAI
@@ -25,8 +24,8 @@ def load_chat_model(fully_specified_name: str) -> BaseChatModel:
         fully_specified_name (str): String in the format 'model/tag'.
     """
     llm = ChatOpenAI(
-        model="gpt://" + os.environ["folder_id"] + fully_specified_name,
-        api_key=os.environ["api_key"],
+        model="gpt://" + os.environ["FOLDER_ID"] + fully_specified_name,
+        api_key=os.environ["API_KEY"],
         base_url="https://llm.api.cloud.yandex.net/v1"
     )
     return llm

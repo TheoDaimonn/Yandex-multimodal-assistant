@@ -13,3 +13,11 @@ langchain_community
 langchain-qdrant
 langchain-gigachat
 langgraph-cli[inmem]
+datasets
+aiogram~=3.20.0.post0
+typing_extensions~=4.13.2
+langsmith~=0.3.38
+beautifulsoup4~=4.13.4
+SQLAlchemy~=2.0.40
+fastembed
+yandex_cloud_ml_sdk
