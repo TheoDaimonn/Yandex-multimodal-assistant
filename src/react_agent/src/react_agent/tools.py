@@ -11,7 +11,7 @@
 Предназначен для использования в агентной среде, поддерживающей LangChain и LangGraph.
 """
 
-MAX_TOKENS = 2048
+MAX_TOKENS = 2048 * 1
 from typing import Any, Callable, List
 import json
 import os
@@ -39,22 +39,22 @@ bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 model = sdk.models.completions("yandexgpt", model_version="rc")
 
 # Загрузка данных
-with open('../data/tuition_fees.json', 'r') as file:
+with open('../../data/tuition_fees.json', 'r') as file:
     TUITION = json.load(file)
 
-with open('../data/scholarship_info.json', 'r') as file:
+with open('../../data/scholarship_info.json', 'r') as file:
     SCHOLARSHIP = json.load(file)
 
-with open('../data/passing_scores.json', 'r') as file:
+with open('../../data/passing_scores.json', 'r') as file:
     PASSING_SCORES = json.load(file)
 
-with open('../data/filials_info.json', 'r') as file:
+with open('../../data/filials_info.json', 'r') as file:
     BRANCH = json.load(file)
 
-with open('../data/individual_achivements_mapping.json', 'r') as file:
+with open('../../data/individual_achivements_mapping.json', 'r') as file:
     I_ACHIVEMENTS = json.load(file)
 
-with open('data/tagging_prompt.md', 'r', encoding='utf-8') as f:
+with open('../../data/tagging_prompt.md', 'r', encoding='utf-8') as f:
     TAGGING_PROMPT = f.read()
 
 # Индексация (если не существует)
@@ -269,7 +269,7 @@ def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
 @tool
 def get_tuition_info() -> str:
     """
-    Получить полную информацию о стоимости обучения.
+    Получить полную информацию о стоимости обучения по институтам.
 
     Возвращает:
         str: JSON с ценами на обучение.
