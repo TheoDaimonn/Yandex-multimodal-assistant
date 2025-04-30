@@ -1,2 +1,4 @@
 /.venv
 .env
+data/support/
+data/result/threads_df.csv

@@ -5,7 +5,7 @@ It includes a basic Tavily search function (as an example)
 These tools are intended as free examples to get started. For production use,
 consider implementing more robust and specialized tools tailored to your needs.
 """
-
+MAX_TOKENS=2048
 from typing import Any, Callable, List, Optional, cast
 import json
 
@@ -57,7 +57,7 @@ if not client.collection_exists("Collection_pdf"):
     batch_size = 4
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.run(doc).embedding for doc in batch["chunk_text"]]
+        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*3]).embedding for doc in batch["chunk_text"]]
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
         
         client.upload_points(
@@ -85,7 +85,7 @@ if not client.collection_exists("Collection_pdf"):
         )
         
 def tag_query(query):
-    with open('../../data/tagging_prompt.md', 'r', encoding='utf-8') as f:
+    with open('data/tagging_prompt.md', 'r', encoding='utf-8') as f:
         system_prompt = f.read()
     return model.run(system_prompt + "\n\n Входной запрос:\n" + query).text
 
@@ -96,7 +96,7 @@ def search(query:str) -> str:
     Предназначен для помощи абитуриентам в получении актуальных данных о направлениях подготовки, правилах поступления, требованиях к документам, расписании экзаменов и других вопросах, связанных с обучением в МАИ.
     Формулируйте запросы чётко и конкретно для получения релевантной информации
     """
-    dense_query_vector = dense_query_embedding_model.run(query).embedding
+    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*3]).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -125,10 +125,12 @@ def search(query:str) -> str:
                 fusion=models.Fusion.RRF,
             ),
             with_payload=True,
-            limit=10
+            limit=35
         )
+        treshold =  sum([p.score for p in resp.points]) / len(resp.points)
                 
         for point in resp.points:
+<<<<<<< HEAD
             if set(point.payload['topics']) >= query_topics or point.score > 0.87:
                 results.append(point.payload["chunk_text"])
     results = results[:20]
@@ -146,6 +148,25 @@ def search(query:str) -> str:
         date = mapping_dict.get(point.payload['source'], '2025-2026')
 
     return "\n".join([20*"=" + "Актуально в период:" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
+=======
+            if 'chat' in point.payload['source']:
+                date = point.payload['source'].split('_')[0].replace('chat', '')
+            else:
+                mapping_dict = {
+                    'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»' : 2024,
+                    'Особые_условия_для_поступления_в_Институт_№8_МАИ' : '2024-2026',
+                    'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив ' : '2025-2026',
+                    'Правила приема МАИ' : '2025-2026',
+                    'Правила Приема(Министерские) ' : '2024 - 2026',
+                    'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ' :' 2012 - 2025'
+                }
+                date = mapping_dict.get(point.payload['source'], '2025-2026')
+            if set(point.payload['topics']).intersection(query_topics) or point.score > treshold:
+                results.append( f"Актуально в период: {date}\n\n" + point.payload["chunk_text"])
+            
+    results = results[:10]
+    return "\n".join([20*"="+ f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
+>>>>>>> 6ff178842eed79db311fcb22bdd1e9e79b6408c5
 
 @tool
 def get_individual_achivements() -> str:
