@@ -2,3 +2,4 @@
 .env
 data/support/
 data/result/threads_df.csv
+*__pycache__*
