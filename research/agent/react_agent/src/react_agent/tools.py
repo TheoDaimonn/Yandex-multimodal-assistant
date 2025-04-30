@@ -54,8 +54,18 @@ if not client.collection_exists("Collection_pdf"):
 
 @tool
 def search(query:str) -> str:
-    """Useful for when you need to answer questions about current events. You should \
-    ask targeted questions"""
+    """
+    Выполняет поиск по базам данных, историям переписки, сайту и документам приёмной комиссии
+    Московского авиационного института (МАИ), чтобы предоставить абитуриентам 
+    актуальную информацию о поступлении.
+
+    Параметры:
+        query (str): Чётко сформулированный поисковый запрос (с программой, формой,
+                     годом и т. д.).
+
+    Возвращает:
+        str: Текстовую сводку с результатами и ссылками на релевантные документы.
+    """
     dense_query_vector = dense_embedding_model.embed_query(query)
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
