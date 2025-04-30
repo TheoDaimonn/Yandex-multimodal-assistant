@@ -30,7 +30,7 @@ import tqdm
 
 if not client.collection_exists("Collection_pdf"):
     
-    df = Dataset.from_pandas(pd.DataFrame(pd.read_csv("react_agent/data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]).head()))
+    df = Dataset.from_pandas(pd.DataFrame(pd.read_csv("react_agent/data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"])))
     client.create_collection(
         "Collection_pdf",
         vectors_config={
@@ -107,7 +107,7 @@ def search(query:str) -> str:
             with_payload=True,
             limit=10,
         ))
-    return results
+    return "\n".join([i. for i in results])
 
 @tool
 def get_individual_achivements() -> str:
