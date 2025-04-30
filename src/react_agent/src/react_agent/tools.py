@@ -76,8 +76,14 @@ if not client.collection_exists("Collection_pdf"):
     )
 
     batch_size = 4
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), total=len(df) // batch_size):
         dense_embeddings = [dense_doc_embedding_model.run(doc[:MAX_TOKENS * 3]).embedding for doc in batch["chunk_text"]]
+=======
+    for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
+                        total=len(df) // batch_size):
+        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*2]).embedding for doc in batch["chunk_text"]]
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -116,7 +122,7 @@ def search(query: str) -> str:
     Возвращает:
         str: До 10 релевантных фрагментов текста из базы знаний с указанием периода актуальности.
     """
-    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*3]).embedding
+    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -162,7 +168,13 @@ def get_individual_achivements() -> str:
     Возвращает:
         str: JSON с полным перечнем достижений и количеством баллов за каждое.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     return f"JSON с информацией об индивидуальных достижениях \n {I_ACHIVEMENTS}"
+=======
+    with open('data/individual_achivements_mapping.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с информацией об индивидуальных достижениях \n {data}"
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
 
 @tool
 def count_individual_achivements(achivements_list: list) -> str:
@@ -175,6 +187,11 @@ def count_individual_achivements(achivements_list: list) -> str:
     Возвращает:
         str: Сумма баллов за достижения.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
+=======
+    with open('data/individual_achivements_mapping.json', 'r') as file:
+        data = json.load(file)
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
     total = 0
     for achievement in achivements_list:
         total += I_ACHIVEMENTS.get(achievement, 0)
@@ -188,7 +205,13 @@ def get_branch_addresses() -> str:
     Возвращает:
         str: JSON с информацией о размещении.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     return f"JSON с информацией об адресах филлиалов \n {BRANCH}"
+=======
+    with open('data/filials_info.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с информацией об адресах филлиалов \n {data}"
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
 
 @tool
 def get_passing_scores() -> str:
@@ -211,6 +234,12 @@ def calculate_total_scholarship(scholarship_names: list[str]) -> str:
     Возвращает:
         str: Общая сумма стипендий или список ненайденных.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
+=======
+    with open('data/scholarship_info.json', 'r') as file:
+        scholarships = json.load(file)
+    
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
     total = 0
     missing = []
     for name in scholarship_names:
@@ -230,7 +259,13 @@ def get_scholarship_amounts() -> str:
     Возвращает:
         str: JSON с информацией о стипендиях.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     return f"JSON с размерами стипендий: \n {SCHOLARSHIP}"
+=======
+    with open('data/scholarships_info.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с размерами стипендий: \n {data}"
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
 
 @tool
 def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
@@ -244,7 +279,15 @@ def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
     Возвращает:
         str: Текст с расчётом стоимости или ошибкой.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     for campus_name, campus_data in TUITION.items():
+=======
+    with open('data/tuition_fees.json', 'r') as file:
+        tuition_data = json.load(file)
+    
+    # Ищем программу во всех филиалах и уровнях образования
+    for campus_name, campus_data in tuition_data.items():
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
         for level_name, level_data in campus_data.items():
             if program_code in level_data:
                 program_info = level_data[program_code]
@@ -273,7 +316,13 @@ def get_tuition_info() -> str:
     Возвращает:
         str: JSON с ценами на обучение.
     """
+<<<<<<< HEAD:src/agent/react_agent/src/react_agent/tools.py
     return f"JSON с данными о стоимости обучения: \n {TUITION}"
+=======
+    with open('data/tuition_fees.json', 'r') as file:
+        data = json.load(file)
+    return f"JSON с данными о стоимости обучения: \n {json.dumps(data, indent=2, ensure_ascii=False)}"
+>>>>>>> 222c79d8e144e302c0005ac1d3862a4b7b2826a9:src/react_agent/src/react_agent/tools.py
 
 @tool
 def yandex_generative_search(question: str) -> str:
