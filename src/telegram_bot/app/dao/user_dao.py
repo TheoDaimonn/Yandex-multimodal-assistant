@@ -24,17 +24,9 @@ class UserDAO:
         await self.session.refresh(user)
         return user
 
-    async def update_user_to_admin(self, tg_id: int) -> User | None:
-        user = await self.get_user_by_tg_id(tg_id)
-        if user:
-            user.is_admin = True
-            await self.session.commit()
-            await self.session.refresh(user)
-        return user
-
     async def get_all_users(self) -> list[User]:
         result = await self.session.execute(select(User))
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def update_user_session(
             self,
@@ -50,6 +42,7 @@ class UserDAO:
             user = await self.create_user(tg_id=tg_id)
             user.current_messages = [{"role": "user", "text": new_message}]
             user.message_count = 1
+
         else:
             messages = user.current_messages or []
             messages.append({

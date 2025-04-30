@@ -2,15 +2,14 @@ import asyncio
 import logging
 from aiogram import F
 from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
 from aiogram import Router
-from datetime import datetime
-import answer_to_user
-import summarise
-
-from src.telegram_bot.app.loader import bot, UserStates, authorized_users, pending_users
+from sqlalchemy import update
 from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
+
+
+from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
+from src.telegram_bot.app.handlers.summarise import summarise
 
 router = Router()
 router.name = 'start'
@@ -22,17 +21,21 @@ async def start_cmd(message: Message, dao: UserDAO):
         "👋бла бла бла приемка бла бла бла \n\n"
     )
 
-    # Создаем/обновляем пользователя
-    await dao.create_user(
-        tg_id=message.from_user.id,
-        username=message.from_user.username
-    )
+    user = await dao.get_user_by_tg_id(message.from_user.id)
+    if not user:
+        user = await dao.create_user(
+            tg_id=message.from_user.id,
+            username=message.from_user.username
+        )
+        logging.info(f"Создан новый пользователь: {user.tg_id}")
+    else:
+        logging.info(f"Пользователь уже существует: {user.tg_id}")
 
     await message.answer(welcome_text)
 
 
 @router.message(F.text, ~F.text.startswith('/'))
-async def handle_text(message: Message, state: FSMContext, dao: UserDAO):
+async def handle_text(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
 
     # Обновляем сессию пользователя
@@ -47,13 +50,7 @@ async def handle_text(message: Message, state: FSMContext, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    # Проверяем авторизацию
-    current_state = await state.get_state()
-    if current_state != UserStates.dialog:
-        await state.set_state(UserStates.dialog)
-
-
-    response = await answer_to_user  # Ваша функция генерации ответа
+    response = await answer_to_user_func  # Ваша функция генерации ответа
     await message.answer(response)
 
 
@@ -61,8 +58,7 @@ async def generate_summary_background(dao: UserDAO, user: User):
     """Фоновая задача для генерации саммари"""
     try:
         summary = await summarise(user.current_messages)  # Ваш агент
-        await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary)
-        )
+        await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary))
         await dao.session.commit()
     except Exception as e:
         logging.error(f"Ошибка генерации саммари: {e}")
