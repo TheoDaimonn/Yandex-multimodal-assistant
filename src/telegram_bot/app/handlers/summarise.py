@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Dict, Any
 
-async def summarise(messages: List[Dict[str, Any]]) -> str:
+async def summarise(messages) -> str:
     """
     Моковая функция генерации саммари
     Имитирует долгую обработку (1 минуту)

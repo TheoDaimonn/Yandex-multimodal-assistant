@@ -50,14 +50,14 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func()  # Ваша функция генерации ответа
+    response = await answer_to_user_func({'asas':1})  # Ваша функция генерации ответа
     await message.answer(response)
 
 
 async def generate_summary_background(dao: UserDAO, user: User):
     """Фоновая задача для генерации саммари"""
     try:
-        summary = await summarise(user.current_messages)  # Ваш агент
+        summary = await summarise("aaaaa")  # Ваш агент
         await dao.session.execute(update(User).where(User.id == user.id).values(last_summary=summary))
         await dao.session.commit()
     except Exception as e:
