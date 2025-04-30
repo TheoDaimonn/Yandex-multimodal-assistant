@@ -1,10 +1,8 @@
-from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
+from src.telegram_bot.app.loader import dp, bot
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
 from src.telegram_bot.app.config import config
-from src.telegram_bot.app.utils.auth import load_authorized_users
 from src.telegram_bot.app.handlers import routers
 from src.telegram_bot.app.database import init_db
 
@@ -13,7 +11,6 @@ logging.basicConfig(level=logging.INFO)
 
 async def on_startup():
     await init_db()  # Инициализируем БД при старте
-    load_authorized_users()
     for router in routers:
         dp.include_router(router)
     logging.info("Бот запущен")
@@ -26,8 +23,6 @@ async def on_shutdown():
 
 
 async def main():
-    bot = Bot(token=config.TG_API_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
 
     await on_startup()
     try:
