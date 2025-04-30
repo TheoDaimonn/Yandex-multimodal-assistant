@@ -26,6 +26,7 @@ def load_chat_model(fully_specified_name: str) -> BaseChatModel:
     llm = ChatOpenAI(
         model="gpt://" + os.environ["FOLDER_ID"] + fully_specified_name,
         api_key=os.environ["API_KEY"],
+        temperature=0.1,
         base_url="https://llm.api.cloud.yandex.net/v1"
     )
     return llm

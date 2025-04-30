@@ -1,46 +1,34 @@
+from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-
 from src.telegram_bot.app.config import config
 from src.telegram_bot.app.utils.auth import load_authorized_users
 from src.telegram_bot.app.handlers import routers
-# from app.handlers.search import agent
-from src.telegram_bot.app.loader import dp, bot, ADMIN_ID
-from src.telegram_bot.app.database import Base, engine
-from src.telegram_bot.app.models.models import User, Session
-async def init_models():
-    Base.metadata.create_all(bind=engine)
-
+from src.telegram_bot.app.database import init_db
 
 logging.basicConfig(level=logging.INFO)
 
 
 async def on_startup():
+    await init_db()  # Инициализируем БД при старте
     load_authorized_users()
-    if ADMIN_ID:
-        logging.info(f"Admin ID loaded: {ADMIN_ID}")
-    else:
-        logging.warning("Admin ID not loaded!")
-
-    logging.info("Бот запущен")
     for router in routers:
         dp.include_router(router)
+    logging.info("Бот запущен")
+
 
 async def on_shutdown():
     logging.info("Shutting down...")
-    try:
-        agent.vectorstore.close()
-    except Exception as e:
-        logging.error(f"Error closing vector store: {e}")
-    
     await dp.storage.close()
     logging.info("Bye!")
 
 
 async def main():
-    await init_models()
+    bot = Bot(token=config.TG_API_TOKEN)
+    dp = Dispatcher(storage=MemoryStorage())
+
     await on_startup()
     try:
         await dp.start_polling(bot)
