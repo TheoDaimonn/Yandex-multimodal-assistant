@@ -10,6 +10,7 @@ from src.telegram_bot.app.dao.user_dao import UserDAO
 
 from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
 from src.telegram_bot.app.handlers.summarise import summarise
+from src.telegram_bot.app.utils.profile_query import profile_query
 
 router = Router()
 router.name = 'start'
