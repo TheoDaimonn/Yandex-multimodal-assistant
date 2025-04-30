@@ -13,50 +13,76 @@ from react_agent.configuration import Configuration
 from langchain_core.tools import tool
 
 from qdrant_client import QdrantClient, models
-from yandex_chain import YandexEmbeddings
-
-from langchain_openai import OpenAIEmbeddings
 import pandas as pd
-client = QdrantClient(url="http://localhost:6333")
+client = QdrantClient(":memory:")
 
 import os
-from fastembed import TextEmbedding, SparseTextEmbedding
+from fastembed import SparseTextEmbedding
+from yandex_cloud_ml_sdk import YCloudML
+sdk = YCloudML(folder_id=os.environ["folder_id"], auth=os.environ["api_key"])
 
-dense_embedding_model = YandexEmbeddings(folder_id=os.environ["folder_id"], api_key=os.environ["api_key"])
+dense_query_embedding_model = sdk.models.text_embeddings("query")
+dense_doc_embedding_model = sdk.models.text_embeddings("doc")
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 
+from datasets import Dataset
+import tqdm
+
 if not client.collection_exists("Collection_pdf"):
+    
+    df = Dataset.from_pandas(pd.DataFrame(pd.read_csv("react_agent/data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]).head()))
     client.create_collection(
         "Collection_pdf",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_embedding_model.embed_document("0")),
+                size=len(dense_doc_embedding_model.run("0").embedding),
                 distance=models.Distance.COSINE,
             )
         },
         sparse_vectors_config={
-            "bm25": models.SparseVectorParams(
+            "sparse": models.SparseVectorParams(
                 modifier=models.Modifier.IDF,
             )
         }
     )
-    df = pd.DataFrame(pd.read_csv("react_agent/data/final_data_with_topics_nd_preprocess.csv"))
-    
-    client.upload_collection(
-        "Collection_pdf",
-        vectors = {
-            "dense": dense_embedding_model.embed_documents(df["chunk_text"].tolist()),
-            "bm25": bm25_embedding_model.embed(df["chunk_text"].tolist()),
-        },
-        payload=df.to_dict(),
-    )
+
+    batch_size = 4
+    for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
+                        total=len(df) // batch_size):
+        dense_embeddings =  [dense_doc_embedding_model.run(doc).embedding for doc in batch["chunk_text"]]
+        bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
+        
+        client.upload_points(
+            "Collection_pdf",
+            points=[
+                models.PointStruct(
+                    id=int(batch["_id"][i]),
+                    vector={
+                        "dense": dense_embeddings[i],
+                        "sparse": bm25_embeddings[i].as_object(),
+                    },
+                    payload={
+                        "_id": batch["_id"][i],
+                        "source": batch["source"][i],
+                        "topics": batch["topics"][i],
+                        "chunk_text": batch["chunk_text"][i],
+                    }
+                )
+                for i, _ in enumerate(batch["_id"])
+            ],
+            # We send a lot of embeddings at once, so it's best to reduce the batch size.
+            # Otherwise, we would have gigantic requests sent for each batch and we can
+            # easily reach the maximum size of a single request.
+            batch_size=batch_size,  
+        )
+        
 
 
 @tool
 def search(query:str) -> str:
     """Useful for when you need to answer questions about current events. You should \
     ask targeted questions"""
-    dense_query_vector = dense_embedding_model.embed_query(query)
+    dense_query_vector = dense_query_embedding_model.run(query).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
         models.Prefetch(
@@ -66,12 +92,12 @@ def search(query:str) -> str:
         ),
         models.Prefetch(
             query=models.SparseVector(**sparse_query_vector.as_object()),
-            using="bm25",
+            using="sparse",
             limit=20,
         )
     ]
     results = []
-    for i in ["Collection_pdf"]: #, "Collection_threads", "Collection_ocr"]:
+    for i in ["Collection_pdf"]:
         results.append(client.query_points(
             i,
             prefetch=prefetch,
