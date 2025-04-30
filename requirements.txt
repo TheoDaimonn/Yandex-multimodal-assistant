@@ -24,3 +24,5 @@ yandex_cloud_ml_sdk
 ragas==0.2.15
 aiosqlite~=0.21.0
 oauth2client~=4.1.3
+
+file:src/react_agent
