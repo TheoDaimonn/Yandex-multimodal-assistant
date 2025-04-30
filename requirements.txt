@@ -21,6 +21,7 @@ beautifulsoup4~=4.13.4
 SQLAlchemy~=2.0.40
 fastembed
 yandex_cloud_ml_sdk
+ragas==0.2.15
 aiosqlite~=0.21.0
 <<<<<<< HEAD
 oauth2client~=4.1.3
