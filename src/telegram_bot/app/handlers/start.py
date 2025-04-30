@@ -40,7 +40,7 @@ async def handle_text(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
 
     # Обновляем сессию пользователя
-    print(message.from_user.is_bot)
+
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
         new_message=message.text,
@@ -53,7 +53,8 @@ async def handle_text(message: Message, dao: UserDAO):
             generate_summary_background(dao, user)
         )
 
-    response = await answer_to_user_func({'asas':1})
+    res = await dao.return_chat_history(tg_id)
+    response = await answer_to_user_func(res)
 
     await dao.update_user_session(
         tg_id=tg_id,

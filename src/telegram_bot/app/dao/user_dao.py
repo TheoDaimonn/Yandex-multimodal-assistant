@@ -28,6 +28,11 @@ class UserDAO:
         result = await self.session.execute(select(User))
         return list(result.scalars().all())
 
+    async def return_chat_history(self, tg_id) -> str:
+        result = await self.session.execute(select(User.current_messages).where(User.tg_id == tg_id))
+        result = result.scalars().first()
+        return "".join(str(result))
+
     async def update_user_session(
             self,
             tg_id: int,
