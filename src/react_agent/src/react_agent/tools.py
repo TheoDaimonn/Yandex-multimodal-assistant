@@ -152,7 +152,7 @@ def search(query: str) -> str:
                 }.get(point.payload['source'], '2025-2026')
             if set(point.payload['topics']).intersection(query_topics) or point.score > treshold:
                 results.append(f"Актуально в период: {date}\n\n{point.payload['chunk_text']}")
-    results = results[:10]
+    results = results[:5]
     return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
 
 @tool
