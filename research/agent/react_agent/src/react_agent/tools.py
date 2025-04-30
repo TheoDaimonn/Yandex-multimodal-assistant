@@ -9,12 +9,15 @@ consider implementing more robust and specialized tools tailored to your needs.
 from typing import Any, Callable, List, Optional, cast
 import json
 
+import requests
+import os
+
 from react_agent.configuration import Configuration
 from langchain_core.tools import tool
 
 from qdrant_client import QdrantClient, models
 import pandas as pd
-client = QdrantClient("http://localhost:6333")
+client = QdrantClient(os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"])
 
 import os
 from fastembed import SparseTextEmbedding
@@ -26,7 +29,7 @@ dense_doc_embedding_model = sdk.models.text_embeddings("doc")
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 folder_id = os.environ["FOLDER_ID"]
 api_key = os.environ["API_KEY"]
-
+IAM_token = os.environ["IAM_token"]
 sdk = YCloudML(folder_id=folder_id, auth=api_key)
 model = sdk.models.completions("yandexgpt", model_version="rc")
 
@@ -132,12 +135,14 @@ def search(query:str) -> str:
     if 'chat' in point.payload['source']:
         date = point.payload['source'].split('_')[0].replace('chat', '')
     else:
-        mapping_dict = {'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»' : 2024,
-'Особые_условия_для_поступления_в_Институт_№8_МАИ' : '2024-2026',
-'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив ' : '2025-2026',
-'Правила приема МАИ' : '2025-2026',
-'Правила Приема(Министерские) ' : '2024 - 2026',
-'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ' :' 2012 - 2025'}
+        mapping_dict = {
+            'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»' : 2024,
+            'Особые_условия_для_поступления_в_Институт_№8_МАИ' : '2024-2026',
+            'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив ' : '2025-2026',
+            'Правила приема МАИ' : '2025-2026',
+            'Правила Приема(Министерские) ' : '2024 - 2026',
+            'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ' :' 2012 - 2025'
+            }
         date = mapping_dict.get(point.payload['source'], '2025-2026')
 
     return "\n".join([20*"=" + "Актуально в период:" + f"\n# Источник номер {i+1}\n" + _ for i, _ in enumerate(results)])
@@ -290,10 +295,62 @@ def get_tuition_info() -> str:
         data = json.load(file)
     return f"JSON с данными о стоимости обучения: \n {json.dumps(data, indent=2, ensure_ascii=False)}"
 
-
-
+@tool
+def yandex_generative_search(question: str) -> str:
+    """
+    Функция для поиска информации в интернете при помощи YandexSearchAPI
+    Может помочь с ответами на вопрос о проходных баллах, БВИ и общей информации приемной комиссии
+    """
+    api_key=os.environ["API_KEY"]
+    folder_id=os.environ["FOLDER_ID"]
+    IAM_token=os.environ["IAM_TOKEN"]
+    # URL API из документации
+    url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+    
+    # Заголовки запроса
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {IAM_token}" if IAM_token else f"Api-Key {api_key}"
+    }
+    
+    # Тело запроса
+    payload = {
+        "modelUri": f"gpt://{folder_id}/yandexgptpro",
+        "completionOptions": {
+            "stream": False,
+            "temperature": 0.3,
+            "maxTokens": "2000"
+        },
+        "site": {
+            "site": [
+            "https://mai.ru",
+            "https://priem.mai.ru",
+            ]
+        },
+        "messages": [
+            {
+                "role": "ROLE_USER",
+                "text": question
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        
+        # Парсинг ответа
+        result = response.json()
+        return result['result']['alternatives'][0]['message']['text']
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        return None
+    except KeyError:
+        print("Error parsing response")
+        return None
 
 TOOLS: List[Callable[..., Any]] = [get_individual_achivements, count_individual_achivements, 
                                     get_branch_addresses,
                                     get_scholarship_amounts, calculate_total_scholarship,
-                                    get_tuition_info, calculate_tuition_by_program, search]
+                                    get_tuition_info, calculate_tuition_by_program, search, yandex_generative_search]
