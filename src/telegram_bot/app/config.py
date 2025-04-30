@@ -4,8 +4,6 @@ import os
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 load_dotenv(override=True)
 
