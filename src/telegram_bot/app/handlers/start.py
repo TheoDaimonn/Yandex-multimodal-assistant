@@ -108,12 +108,12 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=True  
     )
 
-    await message.answer(response, parse_mode=None)
+    await message.answer(response)
 
 @router.message(F.content_type == ContentType.VOICE)
 async def voice_handler(message: Message, dao: UserDAO):
     print('voice_handler')
-
+    tg_id = message.from_user.id
     file = await bot.get_file(message.voice.file_id)
     file_path = file.file_path
 
@@ -133,21 +133,21 @@ async def voice_handler(message: Message, dao: UserDAO):
     
     await message.answer(f"📝 вы сказали: «{text}»")
     user, need = await dao.update_user_session(
-        tg_id=message.from_user.id, new_message=text, is_bot=False
+        tg_id=tg_id, new_message=text, is_bot=False
     )
     if need:
-        asyncio.create_task(generate_summary_background(dao, user, tg_id=message.from_user.id))
+        asyncio.create_task(generate_summary_background(dao, user, tg_id=tg_id))
     resp = await answer_to_user_func(text)
     await dao.update_user_session(
-        tg_id=message.from_user.id, new_message=resp, is_bot=True
+        tg_id=tg_id, new_message=resp, is_bot=True
     )
     await message.answer(resp)
 
-async def generate_summary_background(dao: UserDAO, user: User, id):
+async def generate_summary_background(dao: UserDAO, user: User, tg_id: int):
     """Фоновая задача для генерации саммари"""
     try:
         print('зашли в портрет')
-        res = await dao.return_chat_history(id)
+        res = await dao.return_chat_history(tg_id)
         # print(res)
         summary = await profile_query(res) 
         print(summary)  
