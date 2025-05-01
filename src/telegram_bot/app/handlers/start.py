@@ -102,12 +102,17 @@ async def start_cmd(message: Message, dao: UserDAO):
 
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
+
     tg_id = message.from_user.id
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
         new_message=message.text,
         is_bot=False
     )
+    history = await dao.get_last_n_messages(tg_id, n=3)
+    context_messages = str(history + [{"role": "user", "text": message.text}])
+
+    response = await answer_to_user_func(context_messages)
 
     if need_summary:
         await asyncio.create_task(
@@ -159,9 +164,9 @@ async def voice_handler(message: Message, dao: UserDAO):
     await message.answer(resp)
 
 async def generate_summary_background(dao: UserDAO, user: User, tg_id: int):
-    """Фоновая задача для генерации саммари"""
     try:
         print('зашли в портрет')
+ 
         res = await dao.return_chat_history(tg_id)
         # print(res)
         summary = await profile_query(res) 

@@ -62,3 +62,11 @@ class UserDAO:
         user.last_activity = datetime.now()
         await self.session.commit()
         return user, need_summary
+    
+    async def get_last_n_messages(self, tg_id: int, n: int = 3) -> list[dict]:
+        result = await self.session.execute(
+            select(User.current_messages).where(User.tg_id == tg_id)
+        )
+        messages = result.scalars().first() or []
+        return messages[-n*2:]
+

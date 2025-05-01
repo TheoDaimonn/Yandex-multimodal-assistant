@@ -51,8 +51,14 @@
 ## Архитектура
 ![Архитектура](data\архитектура-Архитектура.drawio.png)
 
-
 [Презентация решения](https://www.canva.com/design/DAGmD4NibeA/nDMmDWEzgEbTpb3zFBArRg/edit)
 
 [Google Drive](https://drive.google.com/drive/folders/1DAMl06ZVpxBqQhkPIB5iLdKH2YCAKFY5) 
 
+### Как запускать 
+
+langgraph sev
+
+python -m src.telegram_bot.app.main
+
++ добавить env.example
