@@ -24,7 +24,8 @@ class Configuration:
     )
 
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="/yandexgpt/rc",
+        #default="/yandexgpt/rc",
+        default="/yandexgpt-32k/latest",
         metadata={
             "description": "The name of the language model to use for the agent's main interactions. "
             "Should be in the form: provider/model-name."
