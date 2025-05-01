@@ -39,27 +39,27 @@ bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 
 model = sdk.models.completions("yandexgpt", model_version="rc")
 # Загрузка данных
-with open('./data/tuition_fees.json', 'r') as file:
+with open(os.path.dirname(__file__) + '/data/tuition_fees.json', 'r') as file:
     TUITION = json.load(file)
 
-with open('./data/scholarships_info.json', 'r') as file:
+with open(os.path.dirname(__file__) + '/data/scholarships_info.json', 'r') as file:
     SCHOLARSHIP = json.load(file)
 
-with open('./data/passing_scores.json', 'r') as file:
+with open(os.path.dirname(__file__) + '/data/passing_scores.json', 'r') as file:
     PASSING_SCORES = json.load(file)
 
-with open('./data/filials_info.json', 'r') as file:
+with open(os.path.dirname(__file__) + '/data/filials_info.json', 'r') as file:
     BRANCH = json.load(file)
 
-with open('./data/individual_achivements_mapping.json', 'r') as file:
+with open(os.path.dirname(__file__) + '/data/individual_achivements_mapping.json', 'r') as file:
     I_ACHIVEMENTS = json.load(file)
 
-with open('./data/tagging_prompt.md', 'r', encoding='utf-8') as f:
+with open(os.path.dirname(__file__) + '/data/tagging_prompt.md', 'r', encoding='utf-8') as f:
     TAGGING_PROMPT = f.read()
 
 # Индексация (если не существует)
 if not client.collection_exists("Collection_pdf"):
-    df = Dataset.from_pandas(pd.read_csv("react_agent/data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]))
+    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]))
     client.create_collection(
         "Collection_pdf",
         vectors_config={
