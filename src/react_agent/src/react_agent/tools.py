@@ -291,22 +291,24 @@ def yandex_generative_search(question: str) -> str:
     folder_id = os.environ["FOLDER_ID"]
     IAM_TOKEN = os.environ["IAM_TOKEN"]
 
-    url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+    url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {IAM_TOKEN}" if IAM_TOKEN else f"Api-Key {api_key}"
     }
     payload = {
-        "modelUri": f"gpt://{folder_id}/yandexgptpro",
-        "completionOptions": {"stream": False, "temperature": 0.3, "maxTokens": "2000"},
         "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
-        "messages": [{"role": "ROLE_USER", "text": question}]
+        "messages": [{"role": "ROLE_USER", "content": question}],
+        "folder_id": folder_id
     }
 
     try:
         response = requests.post(url, json=payload, headers=headers)
         response.raise_for_status()
-        return response.json()['result']['alternatives'][0]['message']['text']
+        result = ''
+        for ind, record in enumerate(response.json()):
+            result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
+        return result
     except requests.exceptions.RequestException as e:
         print(f"Request error: {e}")
         return "Ошибка запроса к YandexGPT"
