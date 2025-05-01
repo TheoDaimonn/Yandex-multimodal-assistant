@@ -58,7 +58,7 @@ INSTRUCTION = (
     "2️⃣  Полезные команды:\n"
     "   • /start — перезапуск и главное меню\n"
     "   • /instruction — эта инструкция\n"
-    "   • /help — связаться со специалистом\n\n"
+    "   • /help — связаться со специалистом\n"
     "   • /questions — частые вопросы\n\n"
     "💡 *Советы:*\n"
     "• Задавайте конкретные вопросы: _«какой проходной балл на 2024?»_\n"
@@ -121,7 +121,7 @@ async def text_handler(message: Message, dao: UserDAO):
     history = await dao.get_last_n_messages(tg_id, n=3)
     context_messages = str(history + [{"role": "user", "text": message.text}])
 
-    response = await answer_to_user_func(context_messages)
+    # response = await answer_to_user_func(context_messages)
 
     if need_summary:
         await asyncio.create_task(
