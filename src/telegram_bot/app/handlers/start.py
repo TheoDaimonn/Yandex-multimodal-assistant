@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import json
@@ -5,6 +6,10 @@ from aiogram import F
 from aiogram.types import Message, ContentType
 from aiogram import Router
 from sqlalchemy import update
+from aiogram.types import (
+    Message, ContentType, InlineKeyboardButton,
+    InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, BotCommand
+)
 from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
 
@@ -23,6 +28,14 @@ router.name = 'start'
 
 DOWNLOAD_DIR = "downloads"
 
+FAQ_QUESTIONS = [
+    "Какие проходные баллы в 2024?",
+    "Сроки подачи документов?",
+    "Какие нужны документы?",
+    "Сколько стоит обучение?",
+    "Условия в общежитии?"
+]
+
 WELCOME = (
     "👋 *Привет!* Я бот приёмной комиссии **МАИ**.\n\n"
     "🔍 Помогу найти всё, что нужно для поступления — от проходных баллов до общежития.\n"
@@ -30,7 +43,8 @@ WELCOME = (
     "📌 Доступные команды:\n"
     "• /start — 🚀 Старт\n"
     "• /instruction — 📑 Инструкция\n"
-    "• /help — 🆘 Помощь специалиста\n\n"
+    "• /help — 🆘 Помощь специалиста\n"
+    "• /questions — ❓ Частые вопросы\n\n"
     "Готов начать? Просто напиши свой вопрос, хоть на китайском 🙂"
 )
 
@@ -40,7 +54,8 @@ INSTRUCTION = (
     "2️⃣  Полезные команды:\n"
     "   • /start — перезапуск и главное меню\n"
     "   • /instruction — эта инструкция\n"
-    "   • /help — связаться со специалистом\n\n"
+    "   • /help — связаться со специалистом\n"
+    "   • /questions — частые вопросы\n\n"
     "💡 *Советы:*\n"
     "• Задавайте конкретные вопросы: _«какой проходной балл на 2024?»_\n"
     "• Можно задавать несколько в одном сообщении\n"
@@ -53,8 +68,6 @@ HELP = (
     "Пожалуйста, опишите проблему подробнее — так мы быстрее поможем\n"
     "[Максим](https://t.me/hell_lumpen) обязательно поможет вам в любое время дня и ночи♥️"
 )
-
-
 
 SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
 SPEECH_API_KEY    = os.environ["API_KEY"]
@@ -108,6 +121,7 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=True  
     )
 
+
     await message.answer(response)
 
 @router.message(F.content_type == ContentType.VOICE)
@@ -116,6 +130,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
     file = await bot.get_file(message.voice.file_id)
     file_path = file.file_path
+
 
     raw_io = await bot.download_file(file_path)   
     local_path = os.path.join(DOWNLOAD_DIR, f"{message.voice.file_id}.ogg")
@@ -163,3 +178,34 @@ async def instruction_cmd(message: Message):
 @router.message(F.text.startswith("/help"))
 async def help_cmd(message: Message):
     await message.answer(HELP)
+
+def build_faq_inline():
+    rows = [
+        [InlineKeyboardButton(text=q, callback_data=f"faq:{q}")]
+        for q in FAQ_QUESTIONS
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+@router.message(F.text.startswith("/questions"))
+@router.message(F.text == "❓ Частые вопросы")
+async def faq_cmd(message: Message):
+    await message.answer(
+        "❓ Вот список частых вопросов, можете выбрать любой:\n"
+        "Ты можешь выбрать себе любого питомца, которого ты захочешь 🦎",
+        reply_markup=build_faq_inline()
+    )
+
+@router.callback_query(F.data.startswith("faq:"))
+async def faq_callback(cq: CallbackQuery, dao: UserDAO):
+    question = cq.data.split("faq:", 1)[1]
+    await cq.answer()
+
+    await dao.update_user_session(tg_id=cq.from_user.id, new_message=question, is_bot=False)
+    response = await answer_to_user_func(question)
+
+    await dao.update_user_session(tg_id=cq.from_user.id, new_message=response, is_bot=True)
+
+    await cq.message.edit_reply_markup()
+    await cq.message.answer(
+        f"❓ *Вопрос:* {question}\n\n💬 *Ответ:* {response}"
+    )

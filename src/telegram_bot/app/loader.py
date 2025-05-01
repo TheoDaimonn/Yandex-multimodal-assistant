@@ -10,3 +10,4 @@ dp = Dispatcher()
 
 # Регистрация middleware
 dp.message.middleware(DaoMiddleware())
+dp.callback_query.middleware(DaoMiddleware())
