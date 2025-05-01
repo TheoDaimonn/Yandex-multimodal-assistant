@@ -109,6 +109,12 @@ async def start_cmd(message: Message, dao: UserDAO):
 
     await message.answer(WELCOME)
 
+@router.message(F.text.startswith('/getdata'))
+async def start_cmd(message: Message, dao: UserDAO):
+
+    print(await dao.return_all_summary())
+    print(await dao.return_all_chat_history())
+
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
 
