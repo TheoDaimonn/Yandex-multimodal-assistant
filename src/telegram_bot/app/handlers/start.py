@@ -119,7 +119,9 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=False
     )
     history = await dao.get_last_n_messages(tg_id, n=3)
-    context_messages = str(history + [{"role": "user", "text": message.text}])
+    for i in history:
+        i["content"] = i.pop("text")
+    context_messages = history + [{"role": "user", "content": message.text}]
 
     response = await answer_to_user_func(context_messages)
 
@@ -127,8 +129,6 @@ async def text_handler(message: Message, dao: UserDAO):
         await asyncio.create_task(
             generate_summary_background(dao, user, tg_id=tg_id)
         )
-    print('biba', message.text)
-    response = await answer_to_user_func(message.text)
 
     await dao.update_user_session(
         tg_id=tg_id,
@@ -167,7 +167,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     )
     if need:
         asyncio.create_task(generate_summary_background(dao, user, tg_id=tg_id))
-    resp = await answer_to_user_func(text)
+    resp = await answer_to_user_func([{"role": "user", "content": text}])
     await dao.update_user_session(
         tg_id=tg_id, new_message=resp, is_bot=True
     )
@@ -216,7 +216,7 @@ async def faq_callback(cq: CallbackQuery, dao: UserDAO):
     await cq.answer()
 
     await dao.update_user_session(tg_id=cq.from_user.id, new_message=question, is_bot=False)
-    response = await answer_to_user_func(question)
+    response = await answer_to_user_func([{"role": "user", "content": question}])
 
     await dao.update_user_session(tg_id=cq.from_user.id, new_message=response, is_bot=True)
 
