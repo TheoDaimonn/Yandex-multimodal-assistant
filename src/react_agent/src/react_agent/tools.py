@@ -12,6 +12,7 @@
 """
 
 MAX_TOKENS = 2048 * 1
+from functools import lru_cache
 from typing import Any, Callable, List
 import json
 import os
@@ -101,8 +102,48 @@ if not client.collection_exists("Collection_pdf"):
             batch_size=batch_size,
         )
 
+@lru_cache(maxsize=30)
 def tag_query(query):
     return model.run(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).text
+
+@lru_cache(maxsize=30)
+def query_from_collection(query: str, collection_name:str, top_k: int = 5) -> str:
+    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
+    sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
+    query_topics = tag_query(query).split(', ')
+    if 'мусор' in query_topics:
+        query_topics.remove("мусор")
+    query_topics = set(query_topics)
+
+    prefetch = [
+        models.Prefetch(query=dense_query_vector, using="dense", limit=6*top_k,),
+        models.Prefetch(query=models.SparseVector(**sparse_query_vector.as_object()), using="sparse", limit=6*top_k,),
+    ]
+    results = []
+    resp = client.query_points(
+        collection_name,
+        prefetch=prefetch,
+        query=models.FusionQuery(fusion=models.Fusion.RRF),
+        with_payload=True,
+        limit=7*top_k,
+    )
+    treshold = sum([p.score for p in resp.points]) / len(resp.points)
+    for point in resp.points:
+        if 'chat' in point.payload['source']:
+            date = point.payload['source'].split('_')[0].replace('chat', '')
+        else:
+            date = {
+                'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»': 2024,
+                'Особые_условия_для_поступления_в_Институт_№8_МАИ': '2024-2026',
+                'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив': '2025-2026',
+                'Правила приема МАИ': '2025-2026',
+                'Правила Приема(Министерские)': '2024 - 2026',
+                'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ': '2012 - 2025'
+            }.get(point.payload['source'], '2025-2026')
+        if set(point.payload['topics']).intersection(query_topics) or point.score > treshold:
+            results.append(f"Актуально в период: {date}\n\n{point.payload['chunk_text']}")
+    results = results[:top_k]
+    return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
 
 @tool
 def search(query: str) -> str:
@@ -117,45 +158,11 @@ def search(query: str) -> str:
     Возвращает:
         str: До 10 релевантных фрагментов текста из базы знаний с указанием периода актуальности.
     """
-    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
-    sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
-    query_topics = tag_query(query).split(', ')
-    if 'мусор' in query_topics:
-        query_topics.remove("мусор")
-    query_topics = set(query_topics)
-
-    prefetch = [
-        models.Prefetch(query=dense_query_vector, using="dense", limit=30),
-        models.Prefetch(query=models.SparseVector(**sparse_query_vector.as_object()), using="sparse", limit=30),
-    ]
-    results = []
-    for col in ["Collection_pdf"]:
-        resp = client.query_points(
-            col,
-            prefetch=prefetch,
-            query=models.FusionQuery(fusion=models.Fusion.RRF),
-            with_payload=True,
-            limit=35,
-        )
-        treshold = sum([p.score for p in resp.points]) / len(resp.points)
-        for point in resp.points:
-            if 'chat' in point.payload['source']:
-                date = point.payload['source'].split('_')[0].replace('chat', '')
-            else:
-                date = {
-                    'Онлайн_магистратура_«Машинное_обучение_и_анализ_данных»': 2024,
-                    'Особые_условия_для_поступления_в_Институт_№8_МАИ': '2024-2026',
-                    'Постановление Правительства РФ от 27.04.2024 N 555 — Редакция от 07.04.2025 — Контур.Норматив': '2025-2026',
-                    'Правила приема МАИ': '2025-2026',
-                    'Правила Приема(Министерские)': '2024 - 2026',
-                    'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ': '2012 - 2025'
-                }.get(point.payload['source'], '2025-2026')
-            if set(point.payload['topics']).intersection(query_topics) or point.score > treshold:
-                results.append(f"Актуально в период: {date}\n\n{point.payload['chunk_text']}")
-    results = results[:5]
-    return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
-
+    return query_from_collection(query, "Collection_pdf")
+    
+    
 @tool
+@lru_cache(maxsize=30)
 def get_individual_achivements() -> str:
     """
     Получить список всех индивидуальных достижений и их баллов.
@@ -164,8 +171,8 @@ def get_individual_achivements() -> str:
         str: JSON с полным перечнем достижений и количеством баллов за каждое.
     """
     return f"JSON с информацией об индивидуальных достижениях \n {I_ACHIVEMENTS}"
-
 @tool
+@lru_cache(maxsize=30)
 def count_individual_achivements(achivements_list: list) -> str:
     """
     Подсчёт суммы баллов за указанные индивидуальные достижения.
@@ -180,8 +187,8 @@ def count_individual_achivements(achivements_list: list) -> str:
     for achievement in achivements_list:
         total += I_ACHIVEMENTS.get(achievement, 0)
     return f"Сумма индивидуальных достижений пользователя: \n {total % 10}"
-
 @tool
+@lru_cache(maxsize=30)
 def get_branch_addresses() -> str:
     """
     Получить список филиалов МАИ и адресов общежитий.
@@ -190,8 +197,8 @@ def get_branch_addresses() -> str:
         str: JSON с информацией о размещении.
     """
     return f"JSON с информацией об адресах филлиалов \n {BRANCH}"
-
 @tool
+@lru_cache(maxsize=30)
 def get_passing_scores() -> str:
     """
     Получить проходные баллы по направлениям подготовки в 2024 году.
@@ -222,8 +229,8 @@ def calculate_total_scholarship(scholarship_names: list[str]) -> str:
     if missing:
         return f"Ошибка: следующие стипендии не найдены - {', '.join(missing)}"
     return f"Общая сумма стипендий: {total} руб."
-
 @tool
+@lru_cache(maxsize=30)
 def get_scholarship_amounts() -> str:
     """
     Получить перечень стипендий и их размеры.
@@ -232,8 +239,8 @@ def get_scholarship_amounts() -> str:
         str: JSON с информацией о стипендиях.
     """
     return f"JSON с размерами стипендий: \n {SCHOLARSHIP}"
-
 @tool
+@lru_cache(maxsize=30)
 def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
     """
     Рассчитать стоимость обучения по коду направления за выбранное количество лет.
@@ -265,8 +272,8 @@ def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
                 else:
                     return f"Ошибка: стоимость обучения для программы {program_code} не указана (уточняется)"
     return f"Ошибка: программа с кодом {program_code} не найдена"
-
 @tool
+@lru_cache(maxsize=30)
 def get_tuition_info() -> str:
     """
     Получить полную информацию о стоимости обучения по институтам.
@@ -277,6 +284,7 @@ def get_tuition_info() -> str:
     return f"JSON с данными о стоимости обучения: \n {TUITION}"
 
 @tool
+@lru_cache(maxsize=30)
 def yandex_generative_search(question: str) -> str:
     """
     Выполнить генеративный поиск ответа на вопрос через YandexGPT (по сайтам МАИ).
