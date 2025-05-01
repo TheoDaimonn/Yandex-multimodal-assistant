@@ -19,7 +19,7 @@ async def on_startup():
         BotCommand(command="start", description="🚀 Старт"),
         BotCommand(command="instruction", description="📑 Инструкция"),
         BotCommand(command="help", description="🆘 Помощь специалиста"),
-        BotCommand(command="question", description="❓ Частые вопросы"),
+        BotCommand(command="questions", description="❓ Частые вопросы")
     ])
 
 async def on_shutdown():

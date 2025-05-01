@@ -10,6 +10,10 @@ from aiogram.types import (
     Message, ContentType, InlineKeyboardButton,
     InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, BotCommand
 )
+from aiogram.types import (
+    Message, ContentType, InlineKeyboardButton,
+    InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, BotCommand
+)
 from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
 
@@ -43,7 +47,7 @@ WELCOME = (
     "📌 Доступные команды:\n"
     "• /start — 🚀 Старт\n"
     "• /instruction — 📑 Инструкция\n"
-    "• /help — 🆘 Помощь специалиста\n\n"
+    "• /help — 🆘 Помощь специалиста\n"
     "• /questions — ❓ Частые вопросы\n\n"
     "Готов начать? Просто напиши свой вопрос, хоть на китайском 🙂"
 )
@@ -68,7 +72,6 @@ HELP = (
     "Пожалуйста, опишите проблему подробнее — так мы быстрее поможем\n"
     "[Максим](https://t.me/hell_lumpen) обязательно поможет вам в любое время дня и ночи♥️"
 )
-
 
 SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
 SPEECH_API_KEY    = os.environ["API_KEY"]
@@ -127,6 +130,7 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=True  
     )
 
+
     await message.answer(response)
 
 @router.message(F.content_type == ContentType.VOICE)
@@ -184,36 +188,31 @@ async def instruction_cmd(message: Message):
 async def help_cmd(message: Message):
     await message.answer(HELP)
 
-
 def build_faq_inline():
-    kb = InlineKeyboardMarkup(row_width=1)
-    for q in FAQ_QUESTIONS:
-        kb.add(InlineKeyboardButton(text=q, callback_data=f"faq:{q}"))
-    return kb
+    rows = [
+        [InlineKeyboardButton(text=q, callback_data=f"faq:{q}")]
+        for q in FAQ_QUESTIONS
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 @router.message(F.text.startswith("/questions"))
 @router.message(F.text == "❓ Частые вопросы")
 async def faq_cmd(message: Message):
     await message.answer(
-        "❓Вот список частых вопросов, можете выбрать любой:\n"
-        "Ты можешь выбрать себе любого питомца, которого ты захочешь🦎",
+        "❓ Вот список частых вопросов, можете выбрать любой:\n"
+        "Ты можешь выбрать себе любого питомца, которого ты захочешь 🦎",
         reply_markup=build_faq_inline()
     )
 
-@router.callback_query(lambda c: c.data.startswith("faq:"))
+@router.callback_query(F.data.startswith("faq:"))
 async def faq_callback(cq: CallbackQuery, dao: UserDAO):
     question = cq.data.split("faq:", 1)[1]
     await cq.answer()
 
-    await dao.update_user_session(
-        tg_id=cq.from_user.id, new_message=question, is_bot=False
-    )
+    await dao.update_user_session(tg_id=cq.from_user.id, new_message=question, is_bot=False)
     response = await answer_to_user_func(question)
 
-
-    await dao.update_user_session(
-        tg_id=cq.from_user.id, new_message=response, is_bot=True
-    )
+    await dao.update_user_session(tg_id=cq.from_user.id, new_message=response, is_bot=True)
 
     await cq.message.edit_reply_markup()
     await cq.message.answer(

@@ -32,9 +32,14 @@ packages = ["langgraph.templates.react_agent", "react_agent"]
 "langgraph.templates.react_agent" = "src/react_agent"
 "react_agent" = "src/react_agent"
 
+[tool.hatch.build.targets.wheel]
+only-include = ["src/react_agent"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
 
 [tool.setuptools.package-data]
-"*" = ["py.typed"]
+"*" = ["py.typed", "*.json", "*.csv", "*.md"] # Включите оба формата
 
 [tool.ruff]
 lint.select = [
