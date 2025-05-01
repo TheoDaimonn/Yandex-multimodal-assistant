@@ -76,6 +76,12 @@ HELP = (
 SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
 SPEECH_API_KEY    = os.environ["API_KEY"]
 
+
+async def get_last_n_messages(self, tg_id: int, n: int = 3) -> list[dict]:
+    result = await self.session.execute(select(User.current_messages).where(User.tg_id == tg_id))
+    messages = result.scalars().first() or []
+    return messages[-n*2:]  # последние n пар (пользователь+бот)
+
 async def transcribe_ya_speechkit(audio_path: str) -> str:
     url = "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize"
     params = {"lang":"ru-RU","folderId":SPEECH_FOLDER_ID}
