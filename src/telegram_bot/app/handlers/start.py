@@ -2,6 +2,8 @@
 import asyncio
 import logging
 import json
+from json import JSONDecodeError
+
 from aiogram import F
 from aiogram.types import Message, ContentType
 from aiogram import Router
@@ -118,9 +120,14 @@ async def start_cmd(message: Message, dao: UserDAO):
 @router.message(F.text.startswith('/get_summary'))
 async def start_cmd(message: Message, dao: UserDAO):
     tg_id = message.from_user.id
-
     responce = await dao.return_users_summary(tg_id)
-    data = json.loads(responce)  # -> получаем словарь {"raw": "..."}
+    data = {}
+    try:
+        data = json.loads(responce)  # -> получаем словарь {"raw": "..."}
+
+    except JSONDecodeError:
+        await message.answer("О Вас пока что недостаточно информации( ")
+        return
     inner_json_str = data["raw"].replace("```json", "").replace("```", "").strip()
 
     # Затем парсим внутренний JSON
