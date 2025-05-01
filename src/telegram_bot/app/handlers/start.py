@@ -97,10 +97,10 @@ async def text_handler(message: Message, dao: UserDAO):
 
     if need_summary:
         await asyncio.create_task(
-            generate_summary_background(dao, user, id=tg_id)
+            generate_summary_background(dao, user, tg_id=tg_id)
         )
-
-    response = await answer_to_user_func('ass')
+    print('biba', message.text)
+    response = await answer_to_user_func(message.text)
 
     await dao.update_user_session(
         tg_id=tg_id,
@@ -108,7 +108,7 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=True  
     )
 
-    await message.answer(response)
+    await message.answer(response, parse_mode=None)
 
 @router.message(F.content_type == ContentType.VOICE)
 async def voice_handler(message: Message, dao: UserDAO):
@@ -137,7 +137,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     )
     if need:
         asyncio.create_task(generate_summary_background(dao, user, tg_id=message.from_user.id))
-    resp = await answer_to_user_func({"text": text})
+    resp = await answer_to_user_func(text)
     await dao.update_user_session(
         tg_id=message.from_user.id, new_message=resp, is_bot=True
     )
