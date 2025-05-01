@@ -3,6 +3,7 @@ import logging
 import os
 import json
 from yandex_cloud_ml_sdk import YCloudML
+import asyncio
 
 folder_id = os.environ["FOLDER_ID"]
 api_key = os.environ["API_KEY"]
@@ -14,13 +15,14 @@ with open('data/prompts/profile.md', 'r', encoding="utf-8") as f:
 
 async def profile_query(dialog: str) -> str:
     prompt = f"{sys_prompt}\n\nДиалог для суммаризации:\n{dialog.strip()}"
-    
-    run_result = await model.run(prompt)
+
+    # выполняем model.run в фоновом потоке
+    run_result = await asyncio.to_thread(model.run, prompt)
     response = run_result.text.strip()
-    
+
     try:
         profile = json.loads(response)
     except json.JSONDecodeError:
         profile = {"raw": response.replace('\n', ' ')}
-    
+
     return json.dumps(profile, ensure_ascii=False)
