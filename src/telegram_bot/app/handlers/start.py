@@ -115,6 +115,19 @@ async def start_cmd(message: Message, dao: UserDAO):
     print(await dao.return_all_summary())
     print(await dao.return_all_chat_history())
 
+@router.message(F.text.startswith('/get_summary'))
+async def start_cmd(message: Message, dao: UserDAO):
+    tg_id = message.from_user.id
+
+    responce = await dao.return_users_summary(tg_id)
+    data = json.loads(responce)  # -> получаем словарь {"raw": "..."}
+    inner_json_str = data["raw"].replace("```json", "").replace("```", "").strip()
+
+    # Затем парсим внутренний JSON
+    inner_data = json.loads(inner_json_str)
+    summary_notes = inner_data["summary_notes"]
+    await message.answer(summary_notes)
+
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
 
