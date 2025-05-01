@@ -118,10 +118,10 @@ async def text_handler(message: Message, dao: UserDAO):
         new_message=message.text,
         is_bot=False
     )
-    history = await dao.get_last_n_messages(tg_id, n=3)
-    context_messages = str(history + [{"role": "user", "text": message.text}])
+    # history = await dao.get_last_n_messages(tg_id, n=3)
+    # context_messages = str(history + [{"role": "user", "text": message.text}])
 
-    response = await answer_to_user_func(context_messages)
+    # response = await answer_to_user_func(context_messages)
 
     if need_summary:
         await asyncio.create_task(
