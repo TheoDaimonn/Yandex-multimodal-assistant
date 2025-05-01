@@ -10,7 +10,6 @@ from langgraph.config import get_config
 
 from react_agent import prompts
 
-
 @dataclass(kw_only=True)
 class Configuration:
     """The configuration for the agent."""
