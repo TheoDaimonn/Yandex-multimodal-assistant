@@ -10,6 +10,10 @@ from aiogram.types import (
     Message, ContentType, InlineKeyboardButton,
     InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, BotCommand
 )
+from aiogram.types import (
+    Message, ContentType, InlineKeyboardButton,
+    InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, BotCommand
+)
 from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
 
@@ -54,7 +58,7 @@ INSTRUCTION = (
     "2️⃣  Полезные команды:\n"
     "   • /start — перезапуск и главное меню\n"
     "   • /instruction — эта инструкция\n"
-    "   • /help — связаться со специалистом\n"
+    "   • /help — связаться со специалистом\n\n"
     "   • /questions — частые вопросы\n\n"
     "💡 *Советы:*\n"
     "• Задавайте конкретные вопросы: _«какой проходной балл на 2024?»_\n"
@@ -71,6 +75,12 @@ HELP = (
 
 SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
 SPEECH_API_KEY    = os.environ["API_KEY"]
+
+
+async def get_last_n_messages(self, tg_id: int, n: int = 3) -> list[dict]:
+    result = await self.session.execute(select(User.current_messages).where(User.tg_id == tg_id))
+    messages = result.scalars().first() or []
+    return messages[-n*2:]  # последние n пар (пользователь+бот)
 
 async def transcribe_ya_speechkit(audio_path: str) -> str:
     url = "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize"
@@ -101,12 +111,17 @@ async def start_cmd(message: Message, dao: UserDAO):
 
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
+
     tg_id = message.from_user.id
     user, need_summary = await dao.update_user_session(
         tg_id=tg_id,
         new_message=message.text,
         is_bot=False
     )
+    history = await dao.get_last_n_messages(tg_id, n=3)
+    context_messages = str(history + [{"role": "user", "text": message.text}])
+
+    response = await answer_to_user_func(context_messages)
 
     if need_summary:
         await asyncio.create_task(
@@ -159,9 +174,9 @@ async def voice_handler(message: Message, dao: UserDAO):
     await message.answer(resp)
 
 async def generate_summary_background(dao: UserDAO, user: User, tg_id: int):
-    """Фоновая задача для генерации саммари"""
     try:
         print('зашли в портрет')
+ 
         res = await dao.return_chat_history(tg_id)
         # print(res)
         summary = await profile_query(res) 

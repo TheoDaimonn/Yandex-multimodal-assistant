@@ -58,8 +58,58 @@ with open(os.path.dirname(__file__) + '/data/tagging_prompt.md', 'r', encoding='
     TAGGING_PROMPT = f.read()
 
 # Индексация (если не существует)
+if not client.collection_exists("Collection_BVI"):
+    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "/data/bvi.csv", header=1, names=["_id","название_олимпиады","профиль_олимпиады","предмет","уровень_олимпиады","направления_подготовки"]))
+    
+    client.create_collection(
+        "Collection_BVI",
+        vectors_config={
+            "dense": models.VectorParams(
+                size=len(dense_doc_embedding_model.run("0").embedding),
+                distance=models.Distance.COSINE,
+            )
+        },
+        sparse_vectors_config={
+            "sparse": models.SparseVectorParams(
+                modifier=models.Modifier.IDF,
+            )
+        }
+    )
+
+    batch_size = 4
+    for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
+                        total=len(df) // batch_size):
+        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*2]).embedding for doc in batch["chunk_text"]]
+        bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
+
+        client.upload_points(
+            "Collection_BVI",
+            points=[
+                models.PointStruct(
+                    id=int(batch["_id"][i]),
+                    vector={
+                        "dense": dense_embeddings[i],
+                        "sparse": bm25_embeddings[i].as_object(),
+                    },
+                    payload={
+                        "_id": batch["_id"][i],
+                        "название_олимпиады": batch["название_олимпиады"][i],
+                        "профиль_олимпиады": batch["профиль_олимпиады"][i],
+                        "предмет": batch["предмет"][i],
+                        "уровень_олимпиады": batch["уровень_олимпиады"][i],
+                        "направления_подготовки": batch["направления_подготовки"][i],
+                        "chunk_text": batch["chunk_text"][i],
+                    }
+                ) for i, _ in enumerate(batch["_id"])
+            ],
+            batch_size=batch_size,
+        )
+
+
+
+# Индексация (если не существует)
 if not client.collection_exists("Collection_pdf"):
-    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]))
+    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "/data/knowledge_data.csv", header=1, names=["_id", "source", "chunk_text", "topics"]))
     client.create_collection(
         "Collection_pdf",
         vectors_config={

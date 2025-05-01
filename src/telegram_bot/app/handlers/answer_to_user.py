@@ -1,3 +1,4 @@
+
 import os
 import asyncio
 from typing import Dict, Any
@@ -25,7 +26,8 @@ async def answer_to_user_func(context: str) -> str:
     
     user_text = context
     if not user_text:
-        return "❗ Пустой запрос"
+        return "❗️ Пустой запрос"
+    print('boba', user_text)
     human = HumanMessage(content=user_text)
     payload = {"messages": [human]}
 
