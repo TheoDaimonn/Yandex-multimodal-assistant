@@ -2,6 +2,8 @@
 import asyncio
 import logging
 import json
+from json import JSONDecodeError
+
 from aiogram import F
 from aiogram.types import Message, ContentType
 from aiogram import Router
@@ -109,6 +111,30 @@ async def start_cmd(message: Message, dao: UserDAO):
 
     await message.answer(WELCOME)
 
+@router.message(F.text.startswith('/getdata'))
+async def start_cmd(message: Message, dao: UserDAO):
+
+    print(await dao.return_all_summary())
+    print(await dao.return_all_chat_history())
+
+@router.message(F.text.startswith('/get_summary'))
+async def start_cmd(message: Message, dao: UserDAO):
+    tg_id = message.from_user.id
+    responce = await dao.return_users_summary(tg_id)
+    data = {}
+    try:
+        data = json.loads(responce)  # -> получаем словарь {"raw": "..."}
+
+    except JSONDecodeError:
+        await message.answer("О Вас пока что недостаточно информации( ")
+        return
+    inner_json_str = data["raw"].replace("```json", "").replace("```", "").strip()
+
+    # Затем парсим внутренний JSON
+    inner_data = json.loads(inner_json_str)
+    summary_notes = inner_data["summary_notes"]
+    await message.answer(summary_notes)
+
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
 
@@ -119,7 +145,9 @@ async def text_handler(message: Message, dao: UserDAO):
         is_bot=False
     )
     history = await dao.get_last_n_messages(tg_id, n=3)
-    context_messages = str(history + [{"role": "user", "text": message.text}])
+    for i in history:
+        i["content"] = i.pop("text")
+    context_messages = history + [{"role": "user", "content": message.text}]
 
     # response = await answer_to_user_func(context_messages)
 
@@ -127,8 +155,6 @@ async def text_handler(message: Message, dao: UserDAO):
         await asyncio.create_task(
             generate_summary_background(dao, user, tg_id=tg_id)
         )
-    print('biba', message.text)
-    response = await answer_to_user_func(message.text)
 
     await dao.update_user_session(
         tg_id=tg_id,
@@ -167,7 +193,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     )
     if need:
         asyncio.create_task(generate_summary_background(dao, user, tg_id=tg_id))
-    resp = await answer_to_user_func(text)
+    resp = await answer_to_user_func([{"role": "user", "content": text}])
     await dao.update_user_session(
         tg_id=tg_id, new_message=resp, is_bot=True
     )
@@ -216,7 +242,7 @@ async def faq_callback(cq: CallbackQuery, dao: UserDAO):
     await cq.answer()
 
     await dao.update_user_session(tg_id=cq.from_user.id, new_message=question, is_bot=False)
-    response = await answer_to_user_func(question)
+    response = await answer_to_user_func([{"role": "user", "content": question}])
 
     await dao.update_user_session(tg_id=cq.from_user.id, new_message=response, is_bot=True)
 

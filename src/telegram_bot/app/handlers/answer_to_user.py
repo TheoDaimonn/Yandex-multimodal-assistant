@@ -16,7 +16,7 @@ from langgraph_sdk import get_client
 
 client = get_client(url=AGENT_HOST+":"+str(AGENT_PORT), api_key=AGENT_API_KEY)
 
-async def answer_to_user_func(context: str) -> str:
+async def answer_to_user_func(context: list[dict]) -> str:
         
     assistants = await client.assistants.search()
     assistants = await client.assistants.search(graph_id=AGENT_NAME)
@@ -24,12 +24,10 @@ async def answer_to_user_func(context: str) -> str:
     agent = assistants[0]
     thread = await client.threads.create()
     
-    user_text = context
+    user_text = context[-1]
     if not user_text:
         return "❗️ Пустой запрос"
-    print('boba', user_text)
-    human = HumanMessage(content=user_text)
-    payload = {"messages": [human]}
+    payload = {"messages": context}
 
     try:
         async for response_obj in client.runs.stream(thread['thread_id'], agent['assistant_id'], input=payload, config={"recursion_limit": 100}):

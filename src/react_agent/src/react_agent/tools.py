@@ -156,7 +156,7 @@ def tag_query(query):
     return model.run(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).text
 
 @lru_cache(maxsize=30)
-def query_from_collection(query: str, collection_name:str, top_k: int = 5) -> str:
+def query_from_collection_with_topics(query: str, collection_name:str, top_k: int = 5) -> str:
     dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
@@ -194,12 +194,33 @@ def query_from_collection(query: str, collection_name:str, top_k: int = 5) -> st
     results = results[:top_k]
     return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
 
-@tool
-def search(query: str) -> str:
-    """
-    Поиск по базе знаний МАИ на основе векторного индекса.
+@lru_cache(maxsize=30)
+def query_from_collection(query: str, collection_name:str, top_k: int = 3) -> str:
+    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
+    sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
+    prefetch = [
+        models.Prefetch(query=dense_query_vector, using="dense", limit=3*top_k,),
+        models.Prefetch(query=models.SparseVector(**sparse_query_vector.as_object()), using="sparse", limit=3*top_k,),
+    ]
+    results = []
+    resp = client.query_points(
+        collection_name,
+        prefetch=prefetch,
+        query=models.FusionQuery(fusion=models.Fusion.RRF),
+        with_payload=True,
+        limit=top_k,
+    )
+    for point in resp.points:
+            results.append(f"{point.payload['chunk_text']}")
+    return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
 
-    Использует гибридную (dense + sparse) модель поиска с фильтрацией по теме и релевантности.
+
+
+@tool
+def search_on_mai_knowledge_base(query: str) -> str:
+    """
+    Поиск по базе знаний МАИ. Содержит много полезного материала для студентов и преподавателей.
+    Стоит упоминать в query тематические темы, которые вас интересуют, а также подробный запрос
 
     Аргументы:
         query (str): Пользовательский запрос на русском языке.
@@ -207,7 +228,21 @@ def search(query: str) -> str:
     Возвращает:
         str: До 10 релевантных фрагментов текста из базы знаний с указанием периода актуальности.
     """
-    return query_from_collection(query, "Collection_pdf")
+    return query_from_collection_with_topics(query, "Collection_pdf")
+
+@tool
+def search_on_bvi_table(query: str) -> str:
+    """
+    Поиск по таблице БВИ для поступления без вступительных испытаний в МАИ. Содержит много полезного материала об олимпиадах, по которым можно поступить без ЕГЭ.
+    Стоит упоминать 
+
+    Аргументы:
+        query (str): Пользовательский запрос на русском языке.
+
+    Возвращает:
+        str: До 10 релевантных фрагментов текста из базы знаний с указанием периода актуальности.
+    """
+    return query_from_collection(query, "Collection_BVI")
     
     
 @tool
@@ -378,5 +413,7 @@ TOOLS: List[Callable[..., Any]] = [
     get_individual_achivements, count_individual_achivements, get_branch_addresses,
     get_scholarship_amounts, calculate_total_scholarship,
     get_tuition_info, calculate_tuition_by_program,
-    search, yandex_generative_search
+    search_on_mai_knowledge_base,
+    search_on_bvi_table,
+    yandex_generative_search
 ]

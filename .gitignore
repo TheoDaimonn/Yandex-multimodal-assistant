@@ -4,7 +4,7 @@ data/support/
 data/result/threads_df.csv
 *__pycache__*
 
-
+database/bot.db
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -32,6 +32,21 @@ class UserDAO:
         result = result.scalars().first()
         return "".join(str(result))
 
+    async def return_all_chat_history(self) -> str:
+        result = await self.session.execute(select(User.current_messages))
+        messages = result.scalars().all()
+        return "\n".join(str(msg) if msg else "" for msg in messages)
+
+    async def return_users_summary(self, tg_id) -> str:
+        result = await self.session.execute(select(User.last_summary).where(User.tg_id == tg_id))
+        result = result.scalars().first()
+        return "".join(str(result))
+
+    async def return_all_summary(self) -> str:
+        result = await self.session.execute(select(User.last_summary))
+        messages = result.scalars().all()
+        return "\n".join(str(msg) if msg else "" for msg in messages)
+
     async def update_user_session(
             self,
             tg_id: int,
