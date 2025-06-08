@@ -158,7 +158,7 @@ if not client.collection_exists("Collection_pdf"):
 
 @lru_cache(maxsize=30)
 def tag_query(query):
-    return chat_model(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).content
+    return chat_model.invoke(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).content
 
 @lru_cache(maxsize=30)
 def query_from_collection_with_topics(query: str, collection_name:str, top_k: int = 5) -> str:
