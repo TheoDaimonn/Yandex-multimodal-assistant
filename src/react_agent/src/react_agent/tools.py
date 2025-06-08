@@ -11,7 +11,8 @@
 Предназначен для использования в агентной среде, поддерживающей LangChain и LangGraph.
 """
 
-MAX_TOKENS = 2048 * 2
+MAX_CONTEXT_LEN = 2048 * 2
+BATCH_SIZE = 16
 from typing import List
 from functools import lru_cache
 from typing import Any, Callable, List
@@ -36,8 +37,8 @@ from react_agent.utils import load_chat_model, load_doc_model, load_query_model
 
 chat_model = load_chat_model("GigaChat-2-Max")
 
-dense_query_embedding_model = load_doc_model("Embeddings-2")
-dense_doc_embedding_model = load_query_model("Embeddings-2")
+dense_query_embedding_model = load_doc_model("EmbeddingsGigaR")
+dense_doc_embedding_model = load_query_model("EmbeddingsGigaR")
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 
 
@@ -80,10 +81,10 @@ if not client.collection_exists("Collection_BVI"):
         }
     )
 
-    batch_size = 4
+    batch_size = BATCH_SIZE
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.embed_documents([doc[:MAX_TOKENS*2]])[0] for doc in batch["chunk_text"]]
+        dense_embeddings =  dense_doc_embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -129,10 +130,10 @@ if not client.collection_exists("Collection_pdf"):
         }
     )
 
-    batch_size = 4
+    batch_size = BATCH_SIZE
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.embed_documents(doc[:MAX_TOKENS*2]) for doc in batch["chunk_text"]]
+        dense_embeddings =  dense_doc_embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -161,7 +162,7 @@ def tag_query(query):
 
 @lru_cache(maxsize=30)
 def query_from_collection_with_topics(query: str, collection_name:str, top_k: int = 5) -> str:
-    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_TOKENS*2])
+    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -200,7 +201,7 @@ def query_from_collection_with_topics(query: str, collection_name:str, top_k: in
 
 @lru_cache(maxsize=30)
 def query_from_collection(query: str, collection_name:str, top_k: int = 3) -> str:
-    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_TOKENS*2])
+    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
         models.Prefetch(query=dense_query_vector, using="dense", limit=3*top_k,),
