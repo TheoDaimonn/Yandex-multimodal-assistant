@@ -2,23 +2,21 @@ import datetime
 import logging
 import os
 import json
-from yandex_cloud_ml_sdk import YCloudML
 import asyncio
 
-folder_id = os.environ["FOLDER_ID"]
-api_key = os.environ["API_KEY"]
-sdk = YCloudML(folder_id=folder_id, auth=api_key)
-model = sdk.models.completions("yandexgpt", model_version="rc")
+from react_agent.utils import load_chat_model
+
+model=load_chat_model(os.environ["LLM_PROFILE_MODEL"])
 
 with open('data/prompts/profile.md', 'r', encoding="utf-8") as f:
-    sys_prompt = f.read().strip()
+    SYS_PROMPT = f.read().strip()
 
 async def profile_query(dialog: str) -> str:
-    prompt = f"{sys_prompt}\n\nДиалог для суммаризации:\n{dialog.strip()}"
+    prompt = f"{SYS_PROMPT}\n\nДиалог для суммаризации:\n{dialog.strip()}"
 
     # выполняем model.run в фоновом потоке
-    run_result = await asyncio.to_thread(model.run, prompt)
-    response = run_result.text.strip()
+    run_result = await asyncio.to_thread(model.invoke, prompt)
+    response = run_result.content
 
     try:
         profile = json.loads(response)

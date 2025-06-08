@@ -9,7 +9,7 @@ from langchain_core.runnables import ensure_config
 from langgraph.config import get_config
 
 from react_agent import prompts
-
+import os
 @dataclass(kw_only=True)
 class Configuration:
     """The configuration for the agent."""
@@ -23,17 +23,9 @@ class Configuration:
     )
 
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="GigaChat-2-Max",
+        default=os.environ["LLM_AGENT_MODEL"],
         metadata={
             "description": "The name of the language model to use for the agent's main interactions. "
-            "Should be in the form: provider/model-name."
-        },
-    )
-
-    max_search_results: int = field(
-        default=10,
-        metadata={
-            "description": "The maximum number of search results to return for each search query."
         },
     )
 

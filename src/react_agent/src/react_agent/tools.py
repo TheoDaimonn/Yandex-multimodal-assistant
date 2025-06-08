@@ -34,7 +34,7 @@ client = QdrantClient(os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_K
 
 from react_agent.utils import load_chat_model, load_doc_model, load_query_model
 
-chat_model = load_chat_model("GigaChat-2-Max")
+chat_model = load_chat_model(os.environ["LLM_TAG_MODEL"])
 
 dense_query_embedding_model = load_doc_model("EmbeddingsGigaR")
 dense_doc_embedding_model = load_query_model("EmbeddingsGigaR")

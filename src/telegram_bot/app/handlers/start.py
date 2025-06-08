@@ -21,7 +21,7 @@ from src.telegram_bot.app.dao.user_dao import UserDAO
 
 from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
 from src.telegram_bot.app.utils.profile_query import profile_query
-from src.telegram_bot.app.utils.speech import transcribe_ya_speechkit
+from src.telegram_bot.app.utils.speech import transcribe_speechkit
 
 import asyncio
 import os
@@ -75,26 +75,11 @@ HELP = (
     "[Максим](https://t.me/hell_lumpen) обязательно поможет вам в любое время дня и ночи♥️"
 )
 
-SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
-SPEECH_API_KEY    = os.environ["API_KEY"]
-
-
 async def get_last_n_messages(self, tg_id: int, n: int = 3) -> list[dict]:
     result = await self.session.execute(select(User.current_messages).where(User.tg_id == tg_id))
     messages = result.scalars().first() or []
     return messages[-n*2:]  # последние n пар (пользователь+бот)
 
-async def transcribe_ya_speechkit(audio_path: str) -> str:
-    url = "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize"
-    params = {"lang":"ru-RU","folderId":SPEECH_FOLDER_ID}
-    headers = {"Authorization":f"Api-Key {SPEECH_API_KEY}"}
-    async with aiohttp.ClientSession() as session:
-        with open(audio_path, "rb") as f:
-            data = f.read()
-        async with session.post(url, params=params, headers=headers, data=data) as resp:
-            result = await resp.json()
-            print("STT response:", result)
-            return result.get("result", "")
         
 @router.message(F.text.startswith('/start'))
 async def start_cmd(message: Message, dao: UserDAO):
@@ -149,7 +134,7 @@ async def text_handler(message: Message, dao: UserDAO):
         i["content"] = i.pop("text")
     context_messages = history + [{"role": "user", "content": message.text}]
 
-    # response = await answer_to_user_func(context_messages)
+    response = await answer_to_user_func(context_messages)
 
     if need_summary:
         await asyncio.create_task(
@@ -178,7 +163,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     with open(local_path, "wb") as f:
         f.write(raw_io.read())     
     
-    text = await transcribe_ya_speechkit(local_path)
+    text = await transcribe_speechkit(local_path)
     print(text)
 
     try: os.remove(local_path)
