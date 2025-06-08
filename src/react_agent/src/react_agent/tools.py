@@ -11,7 +11,8 @@
 Предназначен для использования в агентной среде, поддерживающей LangChain и LangGraph.
 """
 
-MAX_TOKENS = 2048 * 1
+MAX_TOKENS = 2048 * 2
+from typing import List
 from functools import lru_cache
 from typing import Any, Callable, List
 import json
@@ -27,17 +28,20 @@ from react_agent.configuration import Configuration
 
 from qdrant_client import QdrantClient, models
 from fastembed import SparseTextEmbedding
-from yandex_cloud_ml_sdk import YCloudML
 
-# Qdrant + Embedding SDK
-client = QdrantClient(os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"])
-sdk = YCloudML(folder_id=os.environ["FOLDER_ID"], auth=os.environ["API_KEY"])
+# Qdrant
+client = QdrantClient(os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"], timeout=600)
 
-dense_query_embedding_model = sdk.models.text_embeddings("query")
-dense_doc_embedding_model = sdk.models.text_embeddings("doc")
+from react_agent.utils import load_chat_model, load_doc_model, load_query_model
+
+chat_model = load_chat_model("GigaChat-2-Max")
+
+dense_query_embedding_model = load_doc_model("Embeddings-2")
+dense_doc_embedding_model = load_query_model("Embeddings-2")
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 
-model = sdk.models.completions("yandexgpt", model_version="rc")
+
+
 # Загрузка данных
 with open(os.path.dirname(__file__) + '/data/tuition_fees.json', 'r') as file:
     TUITION = json.load(file)
@@ -59,13 +63,13 @@ with open(os.path.dirname(__file__) + '/data/tagging_prompt.md', 'r', encoding='
 
 # Индексация (если не существует)
 if not client.collection_exists("Collection_BVI"):
-    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "/data/bvi.csv", header=1, names=["_id","название_олимпиады","профиль_олимпиады","предмет","уровень_олимпиады","направления_подготовки"]))
+    df = Dataset.from_pandas(pd.read_csv(os.path.dirname(__file__) + "/data/bvi.csv", header=1, names=["_id","название_олимпиады","профиль_олимпиады","предмет","уровень_олимпиады","направления_подготовки", "chunk_text"]))
     
     client.create_collection(
         "Collection_BVI",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_doc_embedding_model.run("0").embedding),
+                size=len(dense_doc_embedding_model.embed_documents(["0"])[0]),
                 distance=models.Distance.COSINE,
             )
         },
@@ -79,7 +83,7 @@ if not client.collection_exists("Collection_BVI"):
     batch_size = 4
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*2]).embedding for doc in batch["chunk_text"]]
+        dense_embeddings =  [dense_doc_embedding_model.embed_documents([doc[:MAX_TOKENS*2]])[0] for doc in batch["chunk_text"]]
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -114,7 +118,7 @@ if not client.collection_exists("Collection_pdf"):
         "Collection_pdf",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_doc_embedding_model.run("0").embedding),
+                size=len(dense_doc_embedding_model.embed_documents("0")),
                 distance=models.Distance.COSINE,
             )
         },
@@ -128,7 +132,7 @@ if not client.collection_exists("Collection_pdf"):
     batch_size = 4
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  [dense_doc_embedding_model.run(doc[:MAX_TOKENS*2]).embedding for doc in batch["chunk_text"]]
+        dense_embeddings =  [dense_doc_embedding_model.embed_documents(doc[:MAX_TOKENS*2]) for doc in batch["chunk_text"]]
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -153,11 +157,11 @@ if not client.collection_exists("Collection_pdf"):
 
 @lru_cache(maxsize=30)
 def tag_query(query):
-    return model.run(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).text
+    return chat_model(TAGGING_PROMPT + "\n\n Входной запрос:\n" + query).content
 
 @lru_cache(maxsize=30)
 def query_from_collection_with_topics(query: str, collection_name:str, top_k: int = 5) -> str:
-    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
+    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_TOKENS*2])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -196,7 +200,7 @@ def query_from_collection_with_topics(query: str, collection_name:str, top_k: in
 
 @lru_cache(maxsize=30)
 def query_from_collection(query: str, collection_name:str, top_k: int = 3) -> str:
-    dense_query_vector = dense_query_embedding_model.run(query[:MAX_TOKENS*2]).embedding
+    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_TOKENS*2])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
         models.Prefetch(query=dense_query_vector, using="dense", limit=3*top_k,),
@@ -255,9 +259,10 @@ def get_individual_achivements() -> str:
         str: JSON с полным перечнем достижений и количеством баллов за каждое.
     """
     return f"JSON с информацией об индивидуальных достижениях \n {I_ACHIVEMENTS}"
+
 @tool
 @lru_cache(maxsize=30)
-def count_individual_achivements(achivements_list: list) -> str:
+def count_individual_achivements(achivements_list: List[str]) -> str:
     """
     Подсчёт суммы баллов за указанные индивидуальные достижения.
 
@@ -271,6 +276,7 @@ def count_individual_achivements(achivements_list: list) -> str:
     for achievement in achivements_list:
         total += I_ACHIVEMENTS.get(achievement, 0)
     return f"Сумма индивидуальных достижений пользователя: \n {total % 10}"
+
 @tool
 @lru_cache(maxsize=30)
 def get_branch_addresses() -> str:
@@ -281,6 +287,7 @@ def get_branch_addresses() -> str:
         str: JSON с информацией о размещении.
     """
     return f"JSON с информацией об адресах филлиалов \n {BRANCH}"
+
 @tool
 @lru_cache(maxsize=30)
 def get_passing_scores() -> str:
@@ -293,7 +300,7 @@ def get_passing_scores() -> str:
     return f"JSON с информацией о проходных баллах \n {PASSING_SCORES}"
 
 @tool
-def calculate_total_scholarship(scholarship_names: list[str]) -> str:
+def calculate_total_scholarship(scholarship_names: List[str]) -> str:
     """
     Подсчитать общую сумму стипендий по их названиям.
 
@@ -356,6 +363,7 @@ def calculate_tuition_by_program(program_code: str, duration: int = 1) -> str:
                 else:
                     return f"Ошибка: стоимость обучения для программы {program_code} не указана (уточняется)"
     return f"Ошибка: программа с кодом {program_code} не найдена"
+
 @tool
 @lru_cache(maxsize=30)
 def get_tuition_info() -> str:
@@ -367,46 +375,46 @@ def get_tuition_info() -> str:
     """
     return f"JSON с данными о стоимости обучения: \n {TUITION}"
 
-@tool
-@lru_cache(maxsize=30)
-def yandex_generative_search(question: str) -> str:
-    """
-    Выполнить генеративный поиск ответа на вопрос через YandexGPT (по сайтам МАИ).
+# @tool
+# @lru_cache(maxsize=30)
+# def yandex_generative_search(question: str) -> str:
+#     """
+#     Выполнить генеративный поиск ответа на вопрос через YandexGPT (по сайтам МАИ).
 
-    Аргументы:
-        question (str): Вопрос на русском языке.
+#     Аргументы:
+#         question (str): Вопрос на русском языке.
 
-    Возвращает:
-        str: Сгенерированный ответ или сообщение об ошибке.
-    """
-    api_key = os.environ["API_KEY"]
-    folder_id = os.environ["FOLDER_ID"]
-    IAM_TOKEN = os.environ["IAM_TOKEN"]
+#     Возвращает:
+#         str: Сгенерированный ответ или сообщение об ошибке.
+#     """
+#     api_key = os.environ["API_KEY"]
+#     folder_id = os.environ["FOLDER_ID"]
+#     IAM_TOKEN = os.environ["IAM_TOKEN"]
 
-    url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {IAM_TOKEN}" if IAM_TOKEN else f"Api-Key {api_key}"
-    }
-    payload = {
-        "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
-        "messages": [{"role": "ROLE_USER", "content": question}],
-        "folder_id": folder_id
-    }
+#     url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
+#     headers = {
+#         "Content-Type": "application/json",
+#         "Authorization": f"Bearer {IAM_TOKEN}" if IAM_TOKEN else f"Api-Key {api_key}"
+#     }
+#     payload = {
+#         "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
+#         "messages": [{"role": "ROLE_USER", "content": question}],
+#         "folder_id": folder_id
+#     }
 
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        result = ''
-        for ind, record in enumerate(response.json()):
-            result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
-        return result
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        return "Ошибка запроса к YandexGPT"
-    except KeyError:
-        print("Error parsing response")
-        return "Ошибка обработки ответа от YandexGPT"
+#     try:
+#         response = requests.post(url, json=payload, headers=headers)
+#         response.raise_for_status()
+#         result = ''
+#         for ind, record in enumerate(response.json()):
+#             result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
+#         return result
+#     except requests.exceptions.RequestException as e:
+#         print(f"Request error: {e}")
+#         return "Ошибка запроса к YandexGPT"
+#     except KeyError:
+#         print("Error parsing response")
+#         return "Ошибка обработки ответа от YandexGPT"
 
 # Список всех инструментов
 TOOLS: List[Callable[..., Any]] = [
@@ -415,5 +423,5 @@ TOOLS: List[Callable[..., Any]] = [
     get_tuition_info, calculate_tuition_by_program,
     search_on_mai_knowledge_base,
     search_on_bvi_table,
-    yandex_generative_search
+    # yandex_generative_search
 ]

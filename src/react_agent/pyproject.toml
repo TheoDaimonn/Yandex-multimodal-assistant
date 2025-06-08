@@ -9,13 +9,14 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "langgraph>=0.2.6",
-    "langchain-openai>=0.1.22",
-    "langchain-anthropic>=0.1.23",
-    "langchain>=0.2.14",
-    "langchain-fireworks>=0.1.7",
+    "langgraph>=0.4.8",
+    "langchain-openai>=0.3.20",
+    "langchain-anthropic>=0.3.20",
+    "langchain-gigachat>=0.3.20",
+    "langchain>=0.3.20",
+    "langchain-fireworks>=0.3.0",
     "python-dotenv>=1.0.1",
-    "langchain-tavily>=0.1",
+    "qdrant_client>=1.14.2"
 ]
 
 
