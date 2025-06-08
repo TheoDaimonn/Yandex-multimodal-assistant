@@ -6,13 +6,14 @@ from pathlib import Path
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-SPEECH_URL = os.environ["SPEECH_URL"]
 SPEECH_PROVIDER = os.environ["SPEECH_PROVIDER"]
 
 if SPEECH_PROVIDER == "Yandex":
     SPEECH_URL = os.environ.get("SPEECH_URL", "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize")
-    SPEECH_FOLDER_ID = os.environ["FOLDER_ID"]
-    SPEECH_API_KEY = os.environ["API_KEY"]
+    SPEECH_FOLDER_ID = os.environ["YANDEX_FOLDER_ID"]
+    SPEECH_API_KEY = os.environ["YANDEX_API_KEY"]
+else:
+    SPEECH_URL = os.environ["SPEECH_URL"]
     
 async def transcribe_speechkit(audio_path: str) -> str:
     url = SPEECH_URL

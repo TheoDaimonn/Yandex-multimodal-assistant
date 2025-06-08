@@ -11,13 +11,15 @@
 Предназначен для использования в агентной среде, поддерживающей LangChain и LangGraph.
 """
 
+import os
+
 MAX_CONTEXT_LEN = 2048 * 2
-BATCH_SIZE = 16
+BATCH_SIZE = os.environ.get("BATCH_SIZE", 4)
+
 from typing import List
 from functools import lru_cache
 from typing import Any, Callable, List
 import json
-import os
 import requests
 
 import pandas as pd
@@ -32,12 +34,11 @@ from fastembed import SparseTextEmbedding
 # Qdrant
 client = QdrantClient(os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"], timeout=600)
 
-from react_agent.utils import load_chat_model, load_doc_model, load_query_model
+from react_agent.utils import load_chat_model, load_emb_model
 
 chat_model = load_chat_model(os.environ["LLM_TAG_MODEL"])
 
-dense_query_embedding_model = load_doc_model("EmbeddingsGigaR")
-dense_doc_embedding_model = load_query_model("EmbeddingsGigaR")
+embedding_model = load_emb_model(doc_model=os.environ.get("EMBED_DOC_MODEL"), query_model=os.environ.get("EMBED_QUERY_MODEL"))
 bm25_embedding_model = SparseTextEmbedding("Qdrant/bm25")
 
 
@@ -69,7 +70,7 @@ if not client.collection_exists("Collection_BVI"):
         "Collection_BVI",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_doc_embedding_model.embed_documents(["0"])[0]),
+                size=len(embedding_model.embed_documents(["0"])[0]),
                 distance=models.Distance.COSINE,
             )
         },
@@ -83,7 +84,7 @@ if not client.collection_exists("Collection_BVI"):
     batch_size = BATCH_SIZE
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  dense_doc_embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
+        dense_embeddings =  embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -118,7 +119,7 @@ if not client.collection_exists("Collection_pdf"):
         "Collection_pdf",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_doc_embedding_model.embed_documents(["0"])[0]),
+                size=len(embedding_model.embed_documents(["0"])[0]),
                 distance=models.Distance.COSINE,
             )
         },
@@ -132,7 +133,7 @@ if not client.collection_exists("Collection_pdf"):
     batch_size = BATCH_SIZE
     for batch in tqdm.tqdm(df.iter(batch_size=batch_size), 
                         total=len(df) // batch_size):
-        dense_embeddings =  dense_doc_embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
+        dense_embeddings =  embedding_model.embed_documents([doc[:MAX_CONTEXT_LEN] for doc in batch["chunk_text"]])
         bm25_embeddings = list(bm25_embedding_model.embed(batch["chunk_text"]))
 
         client.upload_points(
@@ -161,7 +162,7 @@ def tag_query(query):
 
 @lru_cache(maxsize=30)
 def query_from_collection_with_topics(query: str, collection_name:str, top_k: int = 5) -> str:
-    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
+    dense_query_vector = embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     query_topics = tag_query(query).split(', ')
     if 'мусор' in query_topics:
@@ -200,7 +201,7 @@ def query_from_collection_with_topics(query: str, collection_name:str, top_k: in
 
 @lru_cache(maxsize=30)
 def query_from_collection(query: str, collection_name:str, top_k: int = 3) -> str:
-    dense_query_vector = dense_query_embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
+    dense_query_vector = embedding_model.embed_query(query[:MAX_CONTEXT_LEN])
     sparse_query_vector = list(bm25_embedding_model.embed([query]))[0]
     prefetch = [
         models.Prefetch(query=dense_query_vector, using="dense", limit=3*top_k,),
@@ -387,8 +388,8 @@ def get_tuition_info() -> str:
 #     Возвращает:
 #         str: Сгенерированный ответ или сообщение об ошибке.
 #     """
-#     api_key = os.environ["API_KEY"]
-#     folder_id = os.environ["FOLDER_ID"]
+#     api_key = os.environ["YANDEX_API_KEY"]
+#     folder_id = os.environ["YANDEX_FOLDER_ID"]
 #     IAM_TOKEN = os.environ["IAM_TOKEN"]
 
 #     url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
@@ -399,7 +400,7 @@ def get_tuition_info() -> str:
 #     payload = {
 #         "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
 #         "messages": [{"role": "ROLE_USER", "content": question}],
-#         "folder_id": folder_id
+#         "YANDEX_FOLDER_ID": folder_id
 #     }
 
 #     try:
