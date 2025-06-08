@@ -25,7 +25,6 @@ from datasets import Dataset
 import tqdm
 
 from langchain_core.tools import tool
-from react_agent.configuration import Configuration
 
 from qdrant_client import QdrantClient, models
 from fastembed import SparseTextEmbedding
@@ -119,7 +118,7 @@ if not client.collection_exists("Collection_pdf"):
         "Collection_pdf",
         vectors_config={
             "dense": models.VectorParams(
-                size=len(dense_doc_embedding_model.embed_documents("0")),
+                size=len(dense_doc_embedding_model.embed_documents(["0"])[0]),
                 distance=models.Distance.COSINE,
             )
         },
@@ -181,7 +180,7 @@ def query_from_collection_with_topics(query: str, collection_name:str, top_k: in
         with_payload=True,
         limit=7*top_k,
     )
-    treshold = sum([p.score for p in resp.points]) / len(resp.points)
+    threshold = sum([p.score for p in resp.points]) / len(resp.points)
     for point in resp.points:
         if 'chat' in point.payload['source']:
             date = point.payload['source'].split('_')[0].replace('chat', '')
@@ -194,7 +193,7 @@ def query_from_collection_with_topics(query: str, collection_name:str, top_k: in
                 'Правила Приема(Министерские)': '2024 - 2026',
                 'Федеральный закон от 29 декабря 2012 г. N 273-ФЗ _Об образовании в Российской Фе ... _ Система ГАРАНТ': '2012 - 2025'
             }.get(point.payload['source'], '2025-2026')
-        if set(point.payload['topics']).intersection(query_topics) or point.score > treshold:
+        if set(point.payload['topics']).intersection(query_topics) or point.score > threshold:
             results.append(f"Актуально в период: {date}\n\n{point.payload['chunk_text']}")
     results = results[:top_k]
     return "\n".join([("=" * 20) + f"\n# Источник номер {i + 1}\n" + r for i, r in enumerate(results)])
@@ -233,7 +232,7 @@ def search_on_mai_knowledge_base(query: str) -> str:
     Возвращает:
         str: До 10 релевантных фрагментов текста из базы знаний с указанием периода актуальности.
     """
-    return query_from_collection_with_topics(query, "Collection_pdf")
+    return query_from_collection(query, "Collection_pdf")
 
 @tool
 def search_on_bvi_table(query: str) -> str:
