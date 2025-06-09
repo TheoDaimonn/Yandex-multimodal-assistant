@@ -28,22 +28,22 @@ def load_chat_model(fully_specified_name: str) -> BaseChatModel:
         from langchain_gigachat import GigaChat
         llm = GigaChat(
             model=fully_specified_name,
-            temperature=0.6,
-            top_p=0.95
+            temperature=0.3,
+            top_p=0.9
         )
     elif os.environ["LLM_PROVIDER"] == "Yandex":
         llm = ChatOpenAI(
             model="gpt://" + os.environ["YANDEX_FOLDER_ID"] + "/" + fully_specified_name,
             api_key=os.environ["YANDEX_API_KEY"],
             base_url="https://llm.api.cloud.yandex.net/v1",
-            temperature=0.6,
-            top_p=0.95
+            temperature=0.3,
+            top_p=0.9
         )
     else:
         llm = ChatOpenAI(
             model=fully_specified_name,
-            temperature=0.6,
-            top_p=0.95
+            temperature=0.3,
+            top_p=0.9
         )
     return llm
 
