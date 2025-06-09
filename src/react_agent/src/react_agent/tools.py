@@ -376,46 +376,45 @@ def get_tuition_info() -> str:
     """
     return f"JSON с данными о стоимости обучения: \n {TUITION}"
 
-# @tool
-# @lru_cache(maxsize=30)
-# def yandex_generative_search(question: str) -> str:
-#     """
-#     Выполнить генеративный поиск ответа на вопрос через YandexGPT (по сайтам МАИ).
+@tool
+@lru_cache(maxsize=30)
+def yandex_generative_search(question: str) -> str:
+    """
+    Выполнить генеративный поиск ответа на вопрос через YandexGPT (по сайтам МАИ).
 
-#     Аргументы:
-#         question (str): Вопрос на русском языке.
+    Аргументы:
+        question (str): Вопрос на русском языке.
 
-#     Возвращает:
-#         str: Сгенерированный ответ или сообщение об ошибке.
-#     """
-#     api_key = os.environ["YANDEX_API_KEY"]
-#     folder_id = os.environ["YANDEX_FOLDER_ID"]
-#     IAM_TOKEN = os.environ["IAM_TOKEN"]
+    Возвращает:
+        str: Сгенерированный ответ или сообщение об ошибке.
+    """
+    api_key = os.environ["YANDEX_API_KEY"]
+    folder_id = os.environ["YANDEX_FOLDER_ID"]
 
-#     url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
-#     headers = {
-#         "Content-Type": "application/json",
-#         "Authorization": f"Bearer {IAM_TOKEN}" if IAM_TOKEN else f"Api-Key {api_key}"
-#     }
-#     payload = {
-#         "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
-#         "messages": [{"role": "ROLE_USER", "content": question}],
-#         "YANDEX_FOLDER_ID": folder_id
-#     }
+    url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Api-Key {api_key}"
+    }
+    payload = {
+        "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
+        "messages": [{"role": "ROLE_USER", "content": question}],
+        "YANDEX_FOLDER_ID": folder_id
+    }
 
-#     try:
-#         response = requests.post(url, json=payload, headers=headers)
-#         response.raise_for_status()
-#         result = ''
-#         for ind, record in enumerate(response.json()):
-#             result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
-#         return result
-#     except requests.exceptions.RequestException as e:
-#         print(f"Request error: {e}")
-#         return "Ошибка запроса к YandexGPT"
-#     except KeyError:
-#         print("Error parsing response")
-#         return "Ошибка обработки ответа от YandexGPT"
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        result = ''
+        for ind, record in enumerate(response.json()):
+            result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
+        return result
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        return "Ошибка запроса к YandexGPT"
+    except KeyError:
+        print("Error parsing response")
+        return "Ошибка обработки ответа от YandexGPT"
 
 # Список всех инструментов
 TOOLS: List[Callable[..., Any]] = [
@@ -423,6 +422,6 @@ TOOLS: List[Callable[..., Any]] = [
     get_scholarship_amounts, calculate_total_scholarship,
     get_tuition_info, calculate_tuition_by_program,
     search_on_mai_knowledge_base,
-    search_on_bvi_table,
+    search_on_bvi_table,   
     # yandex_generative_search
 ]
