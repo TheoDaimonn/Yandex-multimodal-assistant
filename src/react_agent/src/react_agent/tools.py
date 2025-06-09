@@ -423,5 +423,5 @@ TOOLS: List[Callable[..., Any]] = [
     get_tuition_info, calculate_tuition_by_program,
     search_on_mai_knowledge_base,
     search_on_bvi_table,   
-    # yandex_generative_search
+    yandex_generative_search
 ]
