@@ -390,16 +390,23 @@ def yandex_generative_search(question: str) -> str:
     """
     api_key = os.environ["YANDEX_API_KEY"]
     folder_id = os.environ["YANDEX_FOLDER_ID"]
-
+    iam_token = os.environ.get("YANDEX_IAM_TOKEN", None)
     url = "https://searchapi.api.cloud.yandex.net/v2/gen/search"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Api-Key {api_key}"
-    }
+    if iam_token:
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {iam_token}"
+        }
+    else:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Api-Key {api_key}"
+        }
     payload = {
         "site": {"site": ["https://mai.ru", "https://priem.mai.ru", 'https://tabiturient.ru/vuzu/mai/proxodnoi/', 'https://www.ucheba.ru/']},
         "messages": [{"role": "ROLE_USER", "content": question}],
-        "YANDEX_FOLDER_ID": folder_id
+        "folder_id": folder_id
     }
 
     try:
@@ -410,7 +417,7 @@ def yandex_generative_search(question: str) -> str:
             result += f'Результат поиска номер {ind + 1}' + record['message']['content'] + '\n\n'
         return result
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
+        print(f"Request error: {e}{response.content}")
         return "Ошибка запроса к YandexGPT"
     except KeyError:
         print("Error parsing response")
