@@ -49,7 +49,7 @@
 - **Yandex SpeechKit** для распознавания голосовых сообщений в Telegram  
 
 ## Архитектура
-![Архитектура](data\архитектура-Архитектура.drawio.png)
+![Архитектура](data/архитектура-Архитектура.drawio.png)
 
 [Презентация решения](https://www.canva.com/design/DAGmD4NibeA/nDMmDWEzgEbTpb3zFBArRg/edit)
 
