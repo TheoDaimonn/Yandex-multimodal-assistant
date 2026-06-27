@@ -14,7 +14,7 @@
 import os
 
 MAX_CONTEXT_LEN = 2048 * 2
-BATCH_SIZE = os.environ.get("BATCH_SIZE", 4)
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 4))
 
 from typing import List
 from functools import lru_cache
