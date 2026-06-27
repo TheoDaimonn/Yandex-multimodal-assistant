@@ -20,6 +20,7 @@ from src.telegram_bot.app.models.models import User
 from src.telegram_bot.app.dao.user_dao import UserDAO
 
 from src.telegram_bot.app.handlers.answer_to_user import answer_to_user_func
+from src.telegram_bot.app.utils.messages import answer_long_message
 from src.telegram_bot.app.utils.profile_query import profile_query
 from src.telegram_bot.app.utils.speech import transcribe_speechkit
 
@@ -118,7 +119,7 @@ async def start_cmd(message: Message, dao: UserDAO):
         await message.answer("О Вас пока что недостаточно информации( ")
         return
 
-    await message.answer(summary_notes)
+    await answer_long_message(message, summary_notes)
 
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
 async def text_handler(message: Message, dao: UserDAO):
@@ -148,7 +149,7 @@ async def text_handler(message: Message, dao: UserDAO):
     )
 
 
-    await message.answer(response)
+    await answer_long_message(message, response)
 
 @router.message(F.content_type == ContentType.VOICE)
 async def voice_handler(message: Message, dao: UserDAO):
@@ -172,7 +173,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     if not text:
         return await message.reply("❌ не удалось распознать речь.")
     
-    await message.answer(f"📝 вы сказали: «{text}»")
+    await answer_long_message(message, f"📝 вы сказали: «{text}»")
     user, need = await dao.update_user_session(
         tg_id=tg_id, new_message=text, is_bot=False
     )
@@ -182,7 +183,7 @@ async def voice_handler(message: Message, dao: UserDAO):
     await dao.update_user_session(
         tg_id=tg_id, new_message=resp, is_bot=True
     )
-    await message.answer(resp)
+    await answer_long_message(message, resp)
 
 async def generate_summary_background(dao: UserDAO, user: User, tg_id: int):
     try:
@@ -232,6 +233,7 @@ async def faq_callback(cq: CallbackQuery, dao: UserDAO):
     await dao.update_user_session(tg_id=cq.from_user.id, new_message=response, is_bot=True)
 
     await cq.message.edit_reply_markup()
-    await cq.message.answer(
-        f"❓ *Вопрос:* {question}\n\n💬 *Ответ:* {response}"
+    await answer_long_message(
+        cq.message,
+        f"❓ *Вопрос:* {question}\n\n💬 *Ответ:* {response}",
     )

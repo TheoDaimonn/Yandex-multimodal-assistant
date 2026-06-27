@@ -24,12 +24,15 @@ def load_chat_model(fully_specified_name: str) -> BaseChatModel:
     Args:
         fully_specified_name (str): String in the format 'model/tag'.
     """
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "800"))
+
     if os.environ["LLM_PROVIDER"] == "GigaChat":
         from langchain_gigachat import GigaChat
         llm = GigaChat(
             model=fully_specified_name,
             temperature=0.3,
-            top_p=0.9
+            top_p=0.9,
+            max_tokens=max_tokens,
         )
     elif os.environ["LLM_PROVIDER"] == "Yandex":
         llm = ChatOpenAI(
@@ -37,13 +40,15 @@ def load_chat_model(fully_specified_name: str) -> BaseChatModel:
             api_key=os.environ["YANDEX_API_KEY"],
             base_url="https://llm.api.cloud.yandex.net/v1",
             temperature=0.3,
-            top_p=0.9
+            top_p=0.9,
+            max_tokens=max_tokens,
         )
     else:
         llm = ChatOpenAI(
             model=fully_specified_name,
             temperature=0.3,
-            top_p=0.9
+            top_p=0.9,
+            max_tokens=max_tokens,
         )
     return llm
 
@@ -65,5 +70,4 @@ def load_emb_model(doc_model, query_model) -> Embeddings:
             model=doc_model
         )
     return emb
-
 
