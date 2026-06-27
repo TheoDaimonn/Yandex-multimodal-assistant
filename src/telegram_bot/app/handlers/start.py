@@ -109,15 +109,15 @@ async def start_cmd(message: Message, dao: UserDAO):
     data = {}
     try:
         data = json.loads(responce)  # -> получаем словарь {"raw": "..."}
+        inner_json_str = data["raw"].replace("```json", "").replace("```", "").strip()
 
+        # Затем парсим внутренний JSON
+        inner_data = json.loads(inner_json_str)
+        summary_notes = inner_data["summary_notes"]
     except JSONDecodeError:
         await message.answer("О Вас пока что недостаточно информации( ")
         return
-    inner_json_str = data["raw"].replace("```json", "").replace("```", "").strip()
 
-    # Затем парсим внутренний JSON
-    inner_data = json.loads(inner_json_str)
-    summary_notes = inner_data["summary_notes"]
     await message.answer(summary_notes)
 
 @router.message(F.content_type == ContentType.TEXT, ~F.text.startswith("/"))
